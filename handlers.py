@@ -68,44 +68,25 @@ async def cmd_admin(message: Message):
 @router.callback_query(F.data == 'back_to_main')
 async def back_to_main(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
+    
+    # Проверяем, был ли тестовый режим
+    data = await state.get_data()
+    is_test = data.get('is_test_mode', False)
+    
+    if is_test:
+        # Если тестовый режим — показываем меню кандидата
+        await callback.message.edit_text(
+            '🏠 Добро пожаловать в KLAN KAIF!\n\nВыберите действие:',
+            reply_markup=main_menu()
+        )
+        return
+    
     await state.clear()
     clan = await get_clan_by_user(callback.from_user.id)
     if clan:
         await callback.message.edit_text('🏠 Главное меню:', reply_markup=leader_menu())
     else:
         await callback.message.edit_text('🏠 Главное меню:', reply_markup=main_menu())
-
-
-@router.callback_query(F.data == 'back_to_admin')
-async def back_to_admin(callback: CallbackQuery, state: FSMContext):
-    await callback.answer()
-    await state.clear()
-    await callback.message.edit_text(
-        '⚙️ АДМИН-ПАНЕЛЬ KLAN KAIF\n\nВыберите действие:',
-        reply_markup=admin_menu()
-    )
-
-
-@router.callback_query(F.data == 'back_to_roles')
-async def back_to_roles(callback: CallbackQuery, state: FSMContext):
-    await callback.answer()
-    await state.clear()
-    await callback.message.edit_text(
-        '👥 Управление руководителями\n\nВыберите действие:',
-        reply_markup=manage_roles_menu()
-    )
-
-
-@router.callback_query(F.data == 'back_to_test')
-async def back_to_test(callback: CallbackQuery, state: FSMContext):
-    await callback.answer()
-    await state.clear()
-    await callback.message.edit_text(
-        '🧪 ТЕСТОВАЯ АНКЕТА\n\n'
-        'Нажмите "Написать тестовую анкету", чтобы отправить заявку как кандидат.\n\n'
-        '📌 Анкета будет выглядеть как обычная заявка, но с пометкой "🧪 ТЕСТ"',
-        reply_markup=test_application_menu()
-    )
 
 
 # ============================================================
