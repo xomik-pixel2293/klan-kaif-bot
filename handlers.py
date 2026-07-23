@@ -427,6 +427,9 @@ async def skip_photo(callback: CallbackQuery, state: FSMContext):
             f'📸 Скринов: 1 (второе фото пропущено)'
         )
 
+        # ОБНОВЛЯЕМ КОЛИЧЕСТВО ФОТО
+        await update_application_has_photos(app_id, 1)
+
         # Отправка лидеру
         if leader_id:
             try:
@@ -543,7 +546,7 @@ async def my_clan_applications(callback: CallbackQuery):
         emoji = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][idx - 1] if idx <= 5 else '🔹'
         text += f'{emoji} #{app_id} — @{username} — {status_emoji.get(status, status)}\n'
         text += f'   📅 {created_at[:10]}, {created_at[11:16]}\n'
-        text += f'   📸 {"2 фото есть" if has_photos else "без фото"}\n'
+        text += f'   📸 {has_photos} фото\n'
         text += '\n'
 
     buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_main')])
@@ -779,6 +782,7 @@ async def receive_photo_old(message: Message, state: FSMContext):
         return
 
     await update_application_photo_old(app_id, message.photo[-1].file_id)
+    await update_application_has_photos(app_id, 1)  # ← ОБНОВЛЯЕМ КОЛИЧЕСТВО ФОТО
     await state.update_data(photo_old=message.photo[-1].file_id)
     await state.set_state(ApplicationForm.waiting_photo_new)
 
@@ -829,6 +833,7 @@ async def receive_photo_new(message: Message, state: FSMContext):
 
     photo_new = message.photo[-1].file_id
     await update_application_photo_new(app_id, photo_new)
+    await update_application_has_photos(app_id, 2)  # ← ОБНОВЛЯЕМ КОЛИЧЕСТВО ФОТО
 
     await state.clear()
 
@@ -1132,7 +1137,7 @@ async def my_applications(callback: CallbackQuery):
 
         text += f'{status_emoji.get(status, status)} в клан {clan_name}\n'
         text += f'   От: {created_at[:10]}\n'
-        text += f'   📸 {"2 фото есть" if has_photos else "без фото"}\n'
+        text += f'   📸 {has_photos} фото\n'
 
         if status == 'pending':
             buttons.append(
@@ -1585,7 +1590,8 @@ async def admin_export(callback: CallbackQuery):
         headers = [
             'ID', 'User ID', 'Username', 'Клан', 'Имя', 'Возраст',
             'Ник', 'ID игровой', 'Часовой пояс', 'Скрин прошлый',
-            'Скрин текущий', 'Статус', 'Дата'
+            'Скрин текущий', 'Статус', 'Дата создания',
+            'Кто одобрил (ID)', 'Кто одобрил (Username)', 'Дата одобрения'
         ]
         ws.append(headers)
 
@@ -1607,7 +1613,10 @@ async def admin_export(callback: CallbackQuery):
         }
 
         for app in apps:
-            app_id, user_id, username, clan_name, answers_json, photo_old, photo_new, has_photos, status, created_at, reviewed_by, reviewed_at = app
+            (app_id, user_id, username, clan_name, answers_json,
+             photo_old, photo_new, has_photos, chat_id, status,
+             created_at, reviewed_by, reviewed_at) = app
+
             answers = json.loads(answers_json)
 
             is_test = username == 'test_user' or 'Тест' in answers.get('name', '')
@@ -1622,6 +1631,20 @@ async def admin_export(callback: CallbackQuery):
             if is_test:
                 status_ru = '🧪 ' + status_ru + ' (ТЕСТ)'
 
+            reviewer_username = ''
+            if reviewed_by:
+                try:
+                    async with aiosqlite.connect(DB_PATH) as db:
+                        async with db.execute(
+                            'SELECT username FROM applications WHERE reviewed_by = ? LIMIT 1',
+                            (reviewed_by,)
+                        ) as cursor:
+                            result = await cursor.fetchone()
+                            if result:
+                                reviewer_username = result[0]
+                except:
+                    reviewer_username = str(reviewed_by)
+
             row = [
                 app_id, user_id, f'@{username}', clan_name,
                 answers.get('name', ''), answers.get('age', ''),
@@ -1629,7 +1652,11 @@ async def admin_export(callback: CallbackQuery):
                 answers.get('timezone', ''),
                 '✅' if photo_old else '❌',
                 '✅' if photo_new else '❌',
-                status_ru, created_at[:10] if created_at else ''
+                status_ru,
+                created_at[:10] if created_at else '',
+                reviewed_by if reviewed_by else '',
+                reviewer_username,
+                reviewed_at[:16] if reviewed_at else ''
             ]
             ws.append(row)
 
@@ -1737,7 +1764,6 @@ async def admin_clear_test(callback: CallbackQuery):
         return
     await callback.answer()
 
-    # Проверяем, есть ли тестовые заявки
     async with aiosqlite.connect(DB_PATH) as db:
         async with db.execute("SELECT COUNT(*) FROM applications WHERE username = 'test_user'") as cursor:
             count = await cursor.fetchone()
@@ -1750,7 +1776,6 @@ async def admin_clear_test(callback: CallbackQuery):
         )
         return
 
-    # Подтверждение
     await callback.message.edit_text(
         f'⚠️ ВЫ УВЕРЕНЫ?\n\n'
         f'Будут удалены ВСЕ тестовые заявки (с пометкой "ТЕСТ").\n'
