@@ -11,7 +11,7 @@ def main_menu():
         [InlineKeyboardButton(text='📊 Мои заявки', callback_data='my_applications')],
         [InlineKeyboardButton(text='ℹ️ О кланах', callback_data='about_clans')],
         [InlineKeyboardButton(text='📞 Контакты', callback_data='contacts')],
-        [InlineKeyboardButton(text='🔙 Выйти из тестового режима', callback_data='exit_test_mode')],
+        [InlineKeyboardButton(text='🔙 Назад', callback_data='exit_test_mode')],  # ← НОВАЯ КНОПКА
     ])
 
 
