@@ -1752,6 +1752,27 @@ async def admin_blacklist(callback: CallbackQuery):
 
     await callback.message.edit_text(text, reply_markup=admin_menu())
 
+# ============================================================
+# 🧑‍💻 СТАТЬ КАНДИДАТОМ (ДЛЯ АДМИНОВ)
+# ============================================================
+
+@router.callback_query(F.data == 'admin_become_candidate')
+async def admin_become_candidate(callback: CallbackQuery, state: FSMContext):
+    if callback.from_user.id not in ADMIN_IDS:
+        await callback.answer('⛔ Нет прав')
+        return
+    await callback.answer()
+
+    # Показываем ТОЧНО ТАКОЕ ЖЕ МЕНЮ, как у кандидата
+    await callback.message.edit_text(
+        '🏠 Добро пожаловать в KLAN KAIF!\n\n'
+        'Выберите действие:',
+        reply_markup=main_menu()
+    )
+    
+    # Сохраняем в state что это тестовый режим
+    await state.update_data(is_test_mode=True)
+
 
 # ============================================================
 # 🗑 ОЧИСТИТЬ ТЕСТОВЫЕ ЗАЯВКИ (ДЛЯ АДМИНОВ)
