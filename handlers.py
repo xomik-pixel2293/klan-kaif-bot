@@ -109,7 +109,7 @@ async def back_to_test(callback: CallbackQuery, state: FSMContext):
 
 
 # ============================================================
-# 🧪 ТЕСТОВАЯ АНКЕТА (ДЛЯ АДМИНОВ)
+# 🧪 ТЕСТОВАЯ АНКЕТА (ДЛЯ АДМИНОВ) - СТАРАЯ ВЕРСИЯ
 # ============================================================
 
 @router.callback_query(F.data == 'admin_test_application')
@@ -307,6 +307,44 @@ async def test_select_clan(callback: CallbackQuery, state: FSMContext):
 
 
 # ============================================================
+# 🧑‍💻 СТАТЬ КАНДИДАТОМ (ДЛЯ АДМИНОВ) - НОВАЯ ВЕРСИЯ
+# ============================================================
+
+@router.callback_query(F.data == 'admin_become_candidate')
+async def admin_become_candidate(callback: CallbackQuery, state: FSMContext):
+    if callback.from_user.id not in ADMIN_IDS:
+        await callback.answer('⛔ Нет прав')
+        return
+    await callback.answer()
+
+    # Показываем ТОЧНО ТАКОЕ ЖЕ МЕНЮ, как у кандидата
+    await callback.message.edit_text(
+        '🏠 Добро пожаловать в KLAN KAIF!\n\n'
+        'Выберите действие:',
+        reply_markup=main_menu()
+    )
+    
+    # Сохраняем в state что это тестовый режим
+    await state.update_data(is_test_mode=True)
+
+
+# ============================================================
+# 🔙 ВЫХОД ИЗ ТЕСТОВОГО РЕЖИМА
+# ============================================================
+
+@router.callback_query(F.data == 'exit_test_mode')
+async def exit_test_mode(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await state.clear()
+    
+    # Возвращаемся в админ-панель
+    await callback.message.edit_text(
+        '⚙️ АДМИН-ПАНЕЛЬ KLAN KAIF\n\nВыберите действие:',
+        reply_markup=admin_menu()
+    )
+
+
+# ============================================================
 # 👥 ЧЁРНЫЙ СПИСОК
 # ============================================================
 
@@ -398,6 +436,7 @@ async def skip_photo(callback: CallbackQuery, state: FSMContext):
     clan_name = data.get('clan_name')
     answers = data.get('answers', {})
     photo_old = data.get('photo_old')
+    is_test = data.get('is_test_mode', False)
 
     if not app_id:
         await callback.message.answer('Ошибка. Попробуйте начать заново через /start')
@@ -454,12 +493,21 @@ async def skip_photo(callback: CallbackQuery, state: FSMContext):
             except Exception as e:
                 print(f"Ошибка отправки заму: {e}")
 
-        await callback.message.edit_text(
-            f'⏭️ Вы пропустили второе фото.\n'
-            f'✅ Заявка #{app_id} отправлена на рассмотрение!\n'
-            f'Ожидайте решения лидера или зама.',
-            reply_markup=after_apply_buttons()
-        )
+        # Если это тестовый режим, показываем кнопку выхода
+        if is_test:
+            await callback.message.edit_text(
+                f'⏭️ Вы пропустили второе фото.\n'
+                f'✅ ТЕСТОВАЯ заявка #{app_id} отправлена на рассмотрение!\n'
+                f'Ожидайте решения лидера или зама.',
+                reply_markup=exit_test_button()
+            )
+        else:
+            await callback.message.edit_text(
+                f'⏭️ Вы пропустили второе фото.\n'
+                f'✅ Заявка #{app_id} отправлена на рассмотрение!\n'
+                f'Ожидайте решения лидера или зама.',
+                reply_markup=after_apply_buttons()
+            )
 
     except Exception as e:
         await callback.message.answer(f'❌ Ошибка: {e}\nЗаявка сохранена.')
@@ -485,7 +533,7 @@ async def about_clans(callback: CallbackQuery):
                              '• Energy: 1500 в неделю', '• Смена ника: 7 дней']},
         3: {'emoji': '🟢', 'name': 'KAIF METRO',
             'requirements': ['• Возраст: 16+', '• K/D: 1.5+', '• Вынос: 1.5м', '• SMS: 300 в неделю',
-                     '• Energy: 2000 в неделю', '• Смена ника: 7 дней']},
+                             '• Energy: 2000 в неделю', '• Смена ника: 7 дней']},
         4: {'emoji': '🟣', 'name': 'KAIF ESPORTS — турнирный состав',
             'requirements': ['• Возраст: 16+', '• SMS: 150 в неделю', '• Energy: 2000 в неделю', '• Смена ника: 3 дня',
                              '• Ответственность, дисциплина', '• Опыт турниров и праков']}
@@ -655,6 +703,7 @@ async def receive_application(message: Message, state: FSMContext):
     data = await state.get_data()
     clan_id = data.get('clan_id')
     clan_name = data.get('clan_name')
+    is_test = data.get('is_test_mode', False)
 
     text = message.text.strip()
     lines = [line.strip() for line in text.split('\n') if line.strip()]
@@ -721,8 +770,16 @@ async def receive_application(message: Message, state: FSMContext):
         )
         return
 
-    app_id = await add_application(message.from_user.id, message.from_user.username or 'unknown', clan_id, answers)
-    await state.update_data(app_id=app_id, answers=answers)
+    # Сохраняем в state, что это тестовый режим (если есть)
+    await state.update_data(is_test_mode=is_test)
+
+    # Добавляем заявку в БД
+    if is_test:
+        app_id = await add_application(message.from_user.id, 'test_user', clan_id, answers)
+    else:
+        app_id = await add_application(message.from_user.id, message.from_user.username or 'unknown', clan_id, answers)
+
+    await state.update_data(app_id=app_id, answers=answers, is_test_mode=is_test)
     await state.set_state(ApplicationForm.waiting_photo_old)
 
     if clan_name == "KAIF METRO":
@@ -776,14 +833,16 @@ async def send_photo_old(callback: CallbackQuery, state: FSMContext):
 async def receive_photo_old(message: Message, state: FSMContext):
     data = await state.get_data()
     app_id = data.get('app_id')
+    is_test = data.get('is_test_mode', False)
+    
     if not app_id:
         await message.answer('Ошибка. Попробуйте начать заново через /start')
         await state.clear()
         return
 
     await update_application_photo_old(app_id, message.photo[-1].file_id)
-    await update_application_has_photos(app_id, 1)  # ← ОБНОВЛЯЕМ КОЛИЧЕСТВО ФОТО
-    await state.update_data(photo_old=message.photo[-1].file_id)
+    await update_application_has_photos(app_id, 1)
+    await state.update_data(photo_old=message.photo[-1].file_id, is_test_mode=is_test)
     await state.set_state(ApplicationForm.waiting_photo_new)
 
     clan_name = data.get('clan_name')
@@ -825,6 +884,7 @@ async def receive_photo_new(message: Message, state: FSMContext):
     clan_name = data.get('clan_name')
     photo_old = data.get('photo_old')
     answers = data.get('answers', {})
+    is_test = data.get('is_test_mode', False)
 
     if not app_id:
         await message.answer('Ошибка. Попробуйте начать заново через /start')
@@ -833,7 +893,7 @@ async def receive_photo_new(message: Message, state: FSMContext):
 
     photo_new = message.photo[-1].file_id
     await update_application_photo_new(app_id, photo_new)
-    await update_application_has_photos(app_id, 2)  # ← ОБНОВЛЯЕМ КОЛИЧЕСТВО ФОТО
+    await update_application_has_photos(app_id, 2)
 
     await state.clear()
 
@@ -894,11 +954,19 @@ async def receive_photo_new(message: Message, state: FSMContext):
             except Exception as e:
                 print(f"Ошибка отправки заму: {e}")
 
-        await message.answer(
-            f'✅ Заявка #{app_id} отправлена на рассмотрение!\n'
-            f'Ожидайте решения лидера или зама.',
-            reply_markup=after_apply_buttons()
-        )
+        # Если это тестовый режим
+        if is_test:
+            await message.answer(
+                f'🧪 ТЕСТОВАЯ заявка #{app_id} отправлена на рассмотрение!\n'
+                f'Ожидайте решения лидера или зама.',
+                reply_markup=exit_test_button()
+            )
+        else:
+            await message.answer(
+                f'✅ Заявка #{app_id} отправлена на рассмотрение!\n'
+                f'Ожидайте решения лидера или зама.',
+                reply_markup=after_apply_buttons()
+            )
 
     except Exception as e:
         await message.answer(f'❌ Ошибка: {e}\nЗаявка сохранена.')
@@ -1751,27 +1819,6 @@ async def admin_blacklist(callback: CallbackQuery):
             text += f'ID: {item[1]}\nПричина: {item[2]}\nДобавлен: {item[4][:10] if item[4] else "неизвестно"}\n\n'
 
     await callback.message.edit_text(text, reply_markup=admin_menu())
-
-# ============================================================
-# 🧑‍💻 СТАТЬ КАНДИДАТОМ (ДЛЯ АДМИНОВ)
-# ============================================================
-
-@router.callback_query(F.data == 'admin_become_candidate')
-async def admin_become_candidate(callback: CallbackQuery, state: FSMContext):
-    if callback.from_user.id not in ADMIN_IDS:
-        await callback.answer('⛔ Нет прав')
-        return
-    await callback.answer()
-
-    # Показываем ТОЧНО ТАКОЕ ЖЕ МЕНЮ, как у кандидата
-    await callback.message.edit_text(
-        '🏠 Добро пожаловать в KLAN KAIF!\n\n'
-        'Выберите действие:',
-        reply_markup=main_menu()
-    )
-    
-    # Сохраняем в state что это тестовый режим
-    await state.update_data(is_test_mode=True)
 
 
 # ============================================================
