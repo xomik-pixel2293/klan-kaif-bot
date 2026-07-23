@@ -275,36 +275,32 @@ async def test_select_clan(callback: CallbackQuery, state: FSMContext):
         f'📸 Скрины: [тестовые]'
     )
 
-    responsible_id = deputy_id if deputy_id else leader_id
-    sent_to = 'заму' if deputy_id else 'лидеру'
-
-    if responsible_id:
+    # Отправка и лидеру, и заму
+    if leader_id:
         try:
             await callback.bot.send_message(
-                responsible_id,
+                leader_id,
                 text,
                 reply_markup=review_buttons(app_id)
             )
-            await callback.message.answer(f'✅ Тестовая заявка #{app_id} отправлена {sent_to} клана {name}!')
         except Exception as e:
-            await callback.message.answer(
-                f'⚠️ Не удалось отправить заявку {sent_to}.\n'
-                f'Убедитесь, что лидер/зам написал боту /start.\n'
-                f'Ошибка: {e}'
+            print(f"Ошибка отправки лидеру: {e}")
+
+    if deputy_id:
+        try:
+            await callback.bot.send_message(
+                deputy_id,
+                text,
+                reply_markup=review_buttons(app_id)
             )
-            return
-    else:
-        await callback.message.answer(
-            f'❌ В клане {name} нет ответственных!\n'
-            f'Назначьте лидера или зама через админ-панель.'
-        )
-        return
+        except Exception as e:
+            print(f"Ошибка отправки заму: {e}")
 
     await state.clear()
 
     await callback.message.edit_text(
         f'✅ Тестовая заявка #{app_id} создана!\n'
-        f'📨 Отправлена {sent_to} клана {name}.\n\n'
+        f'📨 Отправлена лидеру и заму клана {name}.\n\n'
         f'🧪 Это тестовая заявка — она помечена как "ТЕСТ" в базе данных.',
         reply_markup=admin_menu()
     )
@@ -431,6 +427,7 @@ async def skip_photo(callback: CallbackQuery, state: FSMContext):
             f'📸 Скринов: 1 (второе фото пропущено)'
         )
 
+        # Отправка лидеру
         if leader_id:
             try:
                 await callback.bot.send_photo(
@@ -442,6 +439,7 @@ async def skip_photo(callback: CallbackQuery, state: FSMContext):
             except Exception as e:
                 print(f"Ошибка отправки лидеру: {e}")
 
+        # Отправка заму
         if deputy_id:
             try:
                 await callback.bot.send_photo(
@@ -813,7 +811,7 @@ async def send_photo_new(callback: CallbackQuery, state: FSMContext):
 
 
 # ============================================================
-# 📥 ПОЛУЧЕНИЕ ФОТО 2 + УВЕДОМЛЕНИЕ ЛИДЕРУ/ЗАМУ
+# 📥 ПОЛУЧЕНИЕ ФОТО 2 + УВЕДОМЛЕНИЕ ЛИДЕРУ И ЗАМУ
 # ============================================================
 
 @router.message(ApplicationForm.waiting_photo_new, F.photo)
@@ -855,6 +853,7 @@ async def receive_photo_new(message: Message, state: FSMContext):
             f'📸 Скринов: 2'
         )
 
+        # Отправка лидеру
         if leader_id:
             try:
                 await message.bot.send_media_group(
@@ -872,6 +871,7 @@ async def receive_photo_new(message: Message, state: FSMContext):
             except Exception as e:
                 print(f"Ошибка отправки лидеру: {e}")
 
+        # Отправка заму
         if deputy_id:
             try:
                 await message.bot.send_media_group(
