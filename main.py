@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import threading
+import os
+print("🔍 ADMIN_IDS from env:", os.getenv('ADMIN_IDS'))
 from aiogram import Bot, Dispatcher
 from aiogram.types import BotCommand
 from aiogram.client.session.aiohttp import AiohttpSession
