@@ -368,3 +368,9 @@ async def clear_test_applications():
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("DELETE FROM applications WHERE username = 'test_user'")
         await db.commit()
+
+async def update_application_has_photos(app_id, count):
+    """Обновить количество фото в заявке"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('UPDATE applications SET has_photos = ? WHERE id = ?', (count, app_id))
+        await db.commit()
