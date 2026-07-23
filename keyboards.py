@@ -11,6 +11,7 @@ def main_menu():
         [InlineKeyboardButton(text='📊 Мои заявки', callback_data='my_applications')],
         [InlineKeyboardButton(text='ℹ️ О кланах', callback_data='about_clans')],
         [InlineKeyboardButton(text='📞 Контакты', callback_data='contacts')],
+        [InlineKeyboardButton(text='🔙 Выйти из тестового режима', callback_data='exit_test_mode')],
     ])
 
 
@@ -81,6 +82,12 @@ def after_apply_buttons():
     ])
 
 
+def exit_test_button():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='🔙 Выйти из тестового режима', callback_data='exit_test_mode')],
+    ])
+
+
 def back_button(callback_data='back_to_main'):
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='🔙 Назад', callback_data=callback_data)],
@@ -99,7 +106,7 @@ def admin_menu():
         [InlineKeyboardButton(text='👥 Управление руководителями', callback_data='admin_manage_roles')],
         [InlineKeyboardButton(text='🧪 Тестовая анкета', callback_data='admin_test_application')],
         [InlineKeyboardButton(text='🗑 Очистить тестовые заявки', callback_data='admin_clear_test')],
-        [InlineKeyboardButton(text='🧑‍💻 Стать кандидатом', callback_data='admin_become_candidate')],  # ← НОВАЯ КНОПКА
+        [InlineKeyboardButton(text='🧑‍💻 Стать кандидатом', callback_data='admin_become_candidate')],
         [InlineKeyboardButton(text='🔙 Выйти', callback_data='back_to_main')],
     ])
 
