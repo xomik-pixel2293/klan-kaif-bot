@@ -1125,13 +1125,8 @@ async def handle_contact_message(message: Message, state: FSMContext):
 
     # Если это действие по добавлению/изменению ссылки
     if link_action in ['add', 'edit']:
-        clan = await get_clan_by_user(message.from_user.id)
-        if not clan:
-            await message.answer('⛔ У вас нет прав на это действие')
-            await state.clear()
-            return
-
-        clan_id = clan[0]
+        # Получаем клан из заявки
+        clan_id = app[3]  # clan_id находится на позиции 3 в кортеже заявки
         link = message.text.strip()
 
         print(f"🔍 СОХРАНЯЕМ ССЫЛКУ: clan_id={clan_id}, link={link}")
