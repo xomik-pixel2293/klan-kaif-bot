@@ -1,5 +1,6 @@
-import asyncpg
+import aiosqlite
 import json
+DB_PATH = 'klan_kaif.db' ы
 import os
 from datetime import datetime
 
