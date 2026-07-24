@@ -1,6 +1,6 @@
 import aiosqlite
 import json
-DB_PATH = 'klan_kaif.db' ы
+DB_PATH = 'klan_kaif.db' 
 import os
 from datetime import datetime
 
