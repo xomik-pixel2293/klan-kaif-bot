@@ -4,6 +4,7 @@ import re
 from io import StringIO
 from datetime import datetime
 import aiosqlite
+DB_PATH = 'klan_kaif.db'
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InputMediaPhoto
 from aiogram.filters import Command
