@@ -91,6 +91,15 @@ async def back_to_main(callback: CallbackQuery, state: FSMContext):
         await callback.message.edit_text('🏠 Главное меню:', reply_markup=main_menu())
 
 
+@router.callback_query(F.data == 'back_to_roles')
+async def back_to_roles(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await state.clear()
+    await callback.message.edit_text(
+        '👥 Управление руководителями\n\nВыберите действие:',
+        reply_markup=manage_roles_menu()
+    )
+
 # ============================================================
 # 🧪 ТЕСТОВАЯ АНКЕТА (ДЛЯ АДМИНОВ) - СТАРАЯ ВЕРСИЯ
 # ============================================================
