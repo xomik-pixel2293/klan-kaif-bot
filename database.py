@@ -1,3 +1,4 @@
+import asyncpg
 import aiosqlite
 import json
 DB_PATH = 'klan_kaif.db' 
