@@ -3,3 +3,4 @@ aiosqlite==0.20.0
 python-dotenv==1.0.1
 openpyxl==3.1.2
 flask==2.3.3
+asyncpg==0.29.0
