@@ -1809,10 +1809,20 @@ async def admin_clear_test(callback: CallbackQuery):
         return
     await callback.answer()
 
-    async with aiosqlite.connect(DB_PATH) as db:
-        async with db.execute("SELECT COUNT(*) FROM applications WHERE username = 'test_user'") as cursor:
-            count = await cursor.fetchone()
-            count = count[0] if count else 0
+    # Проверяем, есть ли тестовые заявки
+    count = 0
+    url = os.getenv('DATABASE_URL')
+    if url:
+        conn = await asyncpg.connect(url)
+        try:
+            count = await conn.fetchval("SELECT COUNT(*) FROM applications WHERE username = 'test_user'")
+        finally:
+            await conn.close()
+    else:
+        async with aiosqlite.connect('klan_kaif.db') as db:
+            cursor = await db.execute("SELECT COUNT(*) FROM applications WHERE username = 'test_user'")
+            result = await cursor.fetchone()
+            count = result[0] if result else 0
 
     if count == 0:
         await callback.message.edit_text(
@@ -1821,6 +1831,7 @@ async def admin_clear_test(callback: CallbackQuery):
         )
         return
 
+    # Подтверждение
     await callback.message.edit_text(
         f'⚠️ ВЫ УВЕРЕНЫ?\n\n'
         f'Будут удалены ВСЕ тестовые заявки (с пометкой "ТЕСТ").\n'
@@ -1841,7 +1852,12 @@ async def confirm_clear_test(callback: CallbackQuery):
         return
     await callback.answer()
 
+    print("🗑 УДАЛЯЕМ ТЕСТОВЫЕ ЗАЯВКИ...")
+
+    # Вызов функции очистки
     await clear_test_applications()
+
+    print("✅ ГОТОВО!")
 
     await callback.message.edit_text(
         '✅ Все тестовые заявки удалены!\n\n'
