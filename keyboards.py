@@ -122,7 +122,7 @@ def manage_roles_menu():
         [InlineKeyboardButton(text='🗑 Удалить лидера', callback_data='role_remove_leader')],
         [InlineKeyboardButton(text='🗑 Удалить зама', callback_data='role_remove_deputy')],
         [InlineKeyboardButton(text='📋 Список руководителей', callback_data='role_list')],
-        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')],
+        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_roles')],  
     ])
 
 
