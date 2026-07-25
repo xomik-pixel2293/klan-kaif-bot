@@ -685,21 +685,43 @@ async def view_application_detail(callback: CallbackQuery):
             InlineKeyboardButton(text='❌ Отклонить', callback_data=f'reject_{app_id}')
         ])
         buttons.append([InlineKeyboardButton(text='📩 Связаться', callback_data=f'contact_{app_id}')])
+    elif status == 'accepted':
+        buttons.append([InlineKeyboardButton(text='📩 Связаться', callback_data=f'contact_{app_id}')])
+        buttons.append([InlineKeyboardButton(text='⚠️ Уже принята', callback_data='noop')])
     else:
-        if status == 'accepted':
-            buttons.append([InlineKeyboardButton(text='📩 Связаться', callback_data=f'contact_{app_id}')])
-        buttons.append([InlineKeyboardButton(text='⚠️ Уже обработана', callback_data='noop')])
+        buttons.append([InlineKeyboardButton(text='⚠️ Заявка обработана', callback_data='noop')])
     
     buttons.append([InlineKeyboardButton(text='🔙 Назад к списку', callback_data='my_clan_applications')])
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     
-    await callback.message.edit_text(text, reply_markup=keyboard)
+    # Если есть фото — показываем их
+    if photo_old or photo_new:
+        # Удаляем старое сообщение
+        await callback.message.delete()
+        
+        # Создаём медиа-группу
+        media = []
+        if photo_old:
+            media.append(InputMediaPhoto(media=photo_old, caption=text))
+        if photo_new:
+            # Если есть второе фото — добавляем его без подписи
+            if photo_old:
+                media.append(InputMediaPhoto(media=photo_new))
+            else:
+                media.append(InputMediaPhoto(media=photo_new, caption=text))
+        
+        # Отправляем фото
+        await callback.message.answer_media_group(media=media)
+        # Отправляем кнопки отдельным сообщением
+        await callback.message.answer("📌 Действия с заявкой:", reply_markup=keyboard)
+    else:
+        # Если фото нет — просто текст
+        await callback.message.edit_text(text, reply_markup=keyboard)
 
 
 @router.callback_query(F.data == 'noop')
 async def noop(callback: CallbackQuery):
     await callback.answer('⚠️ Эта заявка уже обработана')
-
 # ============================================================
 # 📝 ПОДАТЬ АНКЕТУ
 # ============================================================
