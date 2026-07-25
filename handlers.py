@@ -593,34 +593,112 @@ async def my_clan_applications(callback: CallbackQuery):
     apps = await get_clan_applications(clan_id)
 
     if not apps:
-        await callback.message.edit_text(f'📋 ЗАЯВКИ В КЛАН {name}:\n\nПока нет ни одной заявки.',
-                                         reply_markup=back_button('back_to_main'))
+        await callback.message.edit_text(
+            f'📋 ЗАЯВКИ В КЛАН {name}:\n\nПока нет ни одной заявки.',
+            reply_markup=back_button('back_to_main')
+        )
         return
 
-    status_emoji = {'pending': '⏳ На рассмотрении', 'accepted': '✅ Принято', 'rejected': '❌ Отклонено',
-                    'revoked': '⚠️ Отозвано'}
-    text = f'📋 ЗАЯВКИ В КЛАН {name}:\n\n📌 Сверху — новые, снизу — старые.\n\n'
+    status_emoji = {
+        'pending': '⏳ На рассмотрении',
+        'accepted': '✅ Принято',
+        'rejected': '❌ Отклонено',
+        'revoked': '⚠️ Отозвано'
+    }
 
+    text = f'📋 ЗАЯВКИ В КЛАН {name}:\n\n📌 Нажми на заявку, чтобы принять или отклонить.\n\n'
+    
     buttons = []
-
-    for idx, app in enumerate(apps, 1):
+    for app in apps:
         app_id, user_id, username, clan_id_db, answers_json, photo_old, photo_new, has_photos, chat_id, status, created_at, reviewed_by, reviewed_at, clan_name = app
-        emoji = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][idx - 1] if idx <= 5 else '🔹'
-        text += f'{emoji} #{app_id} — @{username} — {status_emoji.get(status, status)}\n'
+        answers = json.loads(answers_json)
         
-        # ИСПРАВЛЕННАЯ СТРОКА — ФОРМАТИРУЕМ ДАТУ
+        # Форматируем дату
         if isinstance(created_at, datetime):
-            text += f'   📅 {created_at.strftime("%Y-%m-%d")}, {created_at.strftime("%H:%M")}\n'
+            date_str = created_at.strftime("%d.%m, %H:%M")
         else:
-            text += f'   📅 {created_at[:10]}, {created_at[11:16]}\n'
+            date_str = created_at[:16] if created_at else ""
         
-        text += f'   📸 {has_photos} фото\n'
-        text += '\n'
-
+        status_text = status_emoji.get(status, status)
+        name_display = answers.get('name', 'Без имени')
+        
+        # Кнопка для каждой заявки
+        buttons.append([
+            InlineKeyboardButton(
+                text=f"#{app_id} — @{username} ({name_display}) — {status_text}",
+                callback_data=f"view_app_{app_id}"
+            )
+        ])
+    
     buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_main')])
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
-
+    
     await callback.message.edit_text(text, reply_markup=keyboard)
+
+
+@router.callback_query(F.data.startswith('view_app_'))
+async def view_application_detail(callback: CallbackQuery):
+    await callback.answer()
+    
+    app_id = int(callback.data.split('_')[2])
+    app = await get_application_by_id(app_id)
+    
+    if not app:
+        await callback.message.answer('❌ Заявка не найдена')
+        return
+    
+    app_id, user_id, username, clan_id, answers_json, photo_old, photo_new, has_photos, chat_id, status, created_at, reviewed_by, reviewed_at, clan_name = app
+    answers = json.loads(answers_json)
+    
+    # Форматируем дату
+    if isinstance(created_at, datetime):
+        date_str = created_at.strftime("%d.%m.%Y, %H:%M")
+    else:
+        date_str = created_at[:16] if created_at else ""
+    
+    status_emoji = {
+        'pending': '⏳ На рассмотрении',
+        'accepted': '✅ Принято',
+        'rejected': '❌ Отклонено',
+        'revoked': '⚠️ Отозвано'
+    }
+    
+    text = f"📋 ЗАЯВКА #{app_id}\n\n"
+    text += f"Кандидат: @{username} (ID: {user_id})\n"
+    text += f"Клан: {clan_name}\n"
+    text += f"Статус: {status_emoji.get(status, status)}\n"
+    text += f"Дата: {date_str}\n"
+    text += f"📸 Фото: {has_photos}\n\n"
+    text += "📝 АНКЕТА:\n"
+    text += f"1. Имя: {answers.get('name', '')}\n"
+    text += f"2. Возраст: {answers.get('age', '')}\n"
+    text += f"3. Ник: {answers.get('nickname', '')}\n"
+    text += f"4. ID: {answers.get('id', '')}\n"
+    text += f"5. Часовой пояс (МСК): {answers.get('timezone', '')}\n"
+    
+    # Кнопки действий
+    buttons = []
+    
+    if status == 'pending':
+        buttons.append([
+            InlineKeyboardButton(text='✅ Принять', callback_data=f'accept_{app_id}'),
+            InlineKeyboardButton(text='❌ Отклонить', callback_data=f'reject_{app_id}')
+        ])
+        buttons.append([InlineKeyboardButton(text='📩 Связаться', callback_data=f'contact_{app_id}')])
+    else:
+        if status == 'accepted':
+            buttons.append([InlineKeyboardButton(text='📩 Связаться', callback_data=f'contact_{app_id}')])
+        buttons.append([InlineKeyboardButton(text='⚠️ Уже обработана', callback_data='noop')])
+    
+    buttons.append([InlineKeyboardButton(text='🔙 Назад к списку', callback_data='my_clan_applications')])
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+    
+    await callback.message.edit_text(text, reply_markup=keyboard)
+
+
+@router.callback_query(F.data == 'noop')
+async def noop(callback: CallbackQuery):
+    await callback.answer('⚠️ Эта заявка уже обработана')
 
 # ============================================================
 # 📝 ПОДАТЬ АНКЕТУ
@@ -1895,12 +1973,13 @@ async def confirm_clear_test(callback: CallbackQuery):
         reply_markup=admin_menu()
     )
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
 
 # ============================================================
 # 🔔 НАПОМИНАНИЕ О НЕРАССМОТРЕННЫХ ЗАЯВКАХ
 # ============================================================
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 async def send_reminders(bot):
     """Отправить напоминания о старых заявках"""
@@ -1913,10 +1992,6 @@ async def send_reminders(bot):
     # Группируем по кланам
     clans_apps = {}
     for app in apps:
-        # Структура: id, user_id, username, clan_id, answers, photo_old, photo_new,
-        # has_photos, chat_id, status, created_at, reviewed_by, reviewed_at,
-        # clan_name, leader_id, leader_username, leader_name,
-        # deputy_id, deputy_username, deputy_name
         clan_id = app[3]
         if clan_id not in clans_apps:
             clans_apps[clan_id] = {
@@ -1938,7 +2013,7 @@ async def send_reminders(bot):
         text = f"⏰ НАПОМИНАНИЕ!\n\n"
         text += f"📋 В клане {data['name']} {count} заявок ждут решения более 24 часов:\n\n"
         
-        for i, app in enumerate(data['apps'][:5], 1):  # Показываем первые 5
+        for i, app in enumerate(data['apps'][:5], 1):
             answers = json.loads(app[4])
             text += f"{i}. @{app[2]} — {answers.get('name', 'Без имени')}\n"
             text += f"   📅 {app[10]}\n"
@@ -1948,108 +2023,19 @@ async def send_reminders(bot):
         
         text += f"\n\n📌 Перейдите в раздел «Заявки в мой клан» для обработки."
         
-        # Отправляем лидеру
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text='📋 Перейти к заявкам', callback_data='my_clan_applications')]
+        ])
+        
         if data['leader_id']:
             try:
-                await bot.send_message(
-                    data['leader_id'],
-                    text,
-                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                        [InlineKeyboardButton(text='📋 Перейти к заявкам', callback_data='my_clan_applications')]
-                    ])
-                )
+                await bot.send_message(data['leader_id'], text, reply_markup=keyboard)
             except Exception as e:
                 print(f"Ошибка отправки лидеру {data['leader_id']}: {e}")
         
-        # Отправляем заму
         if data['deputy_id']:
             try:
-                await bot.send_message(
-                    data['deputy_id'],
-                    text,
-                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                        [InlineKeyboardButton(text='📋 Перейти к заявкам', callback_data='my_clan_applications')]
-                    ])
-                )
-            except Exception as e:
-                print(f"Ошибка отправки заму {data['deputy_id']}: {e}")
-
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
-
-# ============================================================
-# 🔔 НАПОМИНАНИЕ О НЕРАССМОТРЕННЫХ ЗАЯВКАХ
-# ============================================================
-
-async def send_reminders(bot):
-    """Отправить напоминания о старых заявках"""
-    apps = await get_old_pending_applications()
-    
-    if not apps:
-        print("🔔 Нет старых заявок для напоминания")
-        return
-    
-    # Группируем по кланам
-    clans_apps = {}
-    for app in apps:
-        # Структура: id, user_id, username, clan_id, answers, photo_old, photo_new,
-        # has_photos, chat_id, status, created_at, reviewed_by, reviewed_at,
-        # clan_name, leader_id, leader_username, leader_name,
-        # deputy_id, deputy_username, deputy_name
-        clan_id = app[3]
-        if clan_id not in clans_apps:
-            clans_apps[clan_id] = {
-                'name': app[13],
-                'leader_id': app[14],
-                'leader_username': app[15],
-                'leader_name': app[16],
-                'deputy_id': app[17],
-                'deputy_username': app[18],
-                'deputy_name': app[19],
-                'apps': []
-            }
-        clans_apps[clan_id]['apps'].append(app)
-    
-    # Отправляем уведомления
-    for clan_id, data in clans_apps.items():
-        count = len(data['apps'])
-        
-        text = f"⏰ НАПОМИНАНИЕ!\n\n"
-        text += f"📋 В клане {data['name']} {count} заявок ждут решения более 24 часов:\n\n"
-        
-        for i, app in enumerate(data['apps'][:5], 1):  # Показываем первые 5
-            answers = json.loads(app[4])
-            text += f"{i}. @{app[2]} — {answers.get('name', 'Без имени')}\n"
-            text += f"   📅 {app[10]}\n"
-        
-        if count > 5:
-            text += f"\n... и ещё {count - 5} заявок"
-        
-        text += f"\n\n📌 Перейдите в раздел «Заявки в мой клан» для обработки."
-        
-        # Отправляем лидеру
-        if data['leader_id']:
-            try:
-                await bot.send_message(
-                    data['leader_id'],
-                    text,
-                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                        [InlineKeyboardButton(text='📋 Перейти к заявкам', callback_data='my_clan_applications')]
-                    ])
-                )
-            except Exception as e:
-                print(f"Ошибка отправки лидеру {data['leader_id']}: {e}")
-        
-        # Отправляем заму
-        if data['deputy_id']:
-            try:
-                await bot.send_message(
-                    data['deputy_id'],
-                    text,
-                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                        [InlineKeyboardButton(text='📋 Перейти к заявкам', callback_data='my_clan_applications')]
-                    ])
-                )
+                await bot.send_message(data['deputy_id'], text, reply_markup=keyboard)
             except Exception as e:
                 print(f"Ошибка отправки заму {data['deputy_id']}: {e}")
 
@@ -2058,7 +2044,7 @@ async def start_scheduler(bot):
     scheduler = AsyncIOScheduler()
     scheduler.add_job(
         send_reminders,
-        CronTrigger(hour=12, minute=0),  # Каждый день в 12:00
+        CronTrigger(hour=12, minute=0),
         args=[bot],
         id='daily_reminder',
         replace_existing=True
