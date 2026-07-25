@@ -1124,6 +1124,36 @@ async def contact_application(callback: CallbackQuery, state: FSMContext):
             reply_markup=contact_menu(app_id)
         )
 
+# ============================================================
+# ✏️ НАПИСАТЬ СООБЩЕНИЕ (ДЛЯ ЛИДЕРОВ/ЗАМОВ)
+# ============================================================
+
+@router.callback_query(F.data.startswith('send_message_'))
+async def send_custom_message(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    app_id = int(callback.data.split('_')[2])
+
+    clan = await get_clan_by_user(callback.from_user.id)
+    if not clan:
+        await callback.message.answer('⛔ У вас нет прав на это действие')
+        return
+
+    app = await get_application_by_id(app_id)
+    if not app:
+        await callback.message.answer('❌ Заявка не найдена')
+        return
+
+    await state.update_data(send_app_id=app_id)
+    await state.set_state(ApplicationForm.waiting_contact_message)
+    await state.update_data(link_action='message')
+
+    await callback.message.edit_text(
+        f'✏️ Напишите сообщение для кандидата @{app[2]}:\n\n'
+        f'Оно будет отправлено сразу после того, как вы его напишете.\n\n'
+        f'Например: "Привет! Приглашаю тебя в клан!"',
+        reply_markup=back_button('back_to_main')
+    )
+
 
 # ============================================================
 # 🔗 ДОБАВИТЬ ССЫЛКУ
@@ -1234,13 +1264,13 @@ async def send_message(callback: CallbackQuery, state: FSMContext):
 
 
 # ============================================================
-# 📨 ПОЛУЧЕНИЕ СООБЩЕНИЯ (ДЛЯ ДОБАВЛЕНИЯ ССЫЛКИ)
+# 📨 ПОЛУЧЕНИЕ СООБЩЕНИЯ (ДЛЯ ДОБАВЛЕНИЯ ССЫЛКИ И СООБЩЕНИЙ)
 # ============================================================
 
 @router.message(ApplicationForm.waiting_contact_message)
 async def handle_contact_message(message: Message, state: FSMContext):
     data = await state.get_data()
-    app_id = data.get('contact_app_id')
+    app_id = data.get('contact_app_id') or data.get('send_app_id')
     link_action = data.get('link_action')
 
     if not app_id:
@@ -1269,7 +1299,21 @@ async def handle_contact_message(message: Message, state: FSMContext):
         await state.clear()
         return
 
-    # Если это просто сообщение для кандидата
+    # Если это сообщение для кандидата
+    if link_action == 'message':
+        try:
+            await message.bot.send_message(
+                app[1],
+                f'📩 Сообщение от лидера/зама клана {app[12]}:\n\n{message.text}'
+            )
+            await message.answer(f'✅ Сообщение отправлено кандидату @{app[2]}!')
+        except Exception as e:
+            await message.answer(f'❌ Не удалось отправить сообщение. Ошибка: {e}')
+        
+        await state.clear()
+        return
+
+    # Если это просто сообщение для кандидата (старая логика)
     try:
         await message.bot.send_message(
             app[1],
