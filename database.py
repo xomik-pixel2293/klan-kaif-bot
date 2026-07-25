@@ -1,9 +1,10 @@
 import asyncpg
 import aiosqlite
 import json
-DB_PATH = 'klan_kaif.db' 
 import os
 from datetime import datetime
+
+DB_PATH = 'klan_kaif.db'
 
 # ============================================================
 # 📌 ДАННЫЕ КЛАНОВ
@@ -26,8 +27,6 @@ CLANS_DATA = [
 # ============================================================
 
 def get_database_url():
-    """Получить URL базы данных из переменных окружения"""
-    # Приоритет: Supabase > локальная SQLite
     url = os.getenv('DATABASE_URL')
     if url:
         return url
@@ -35,15 +34,12 @@ def get_database_url():
 
 
 async def get_connection():
-    """Получить подключение к БД (Supabase или SQLite)"""
     url = get_database_url()
     if url:
-        # Используем Supabase (PostgreSQL)
         return await asyncpg.connect(url)
     else:
-        # Используем SQLite (локально)
         import aiosqlite
-        return await aiosqlite.connect('klan_kaif.db')
+        return await aiosqlite.connect(DB_PATH)
 
 
 # ============================================================
@@ -51,14 +47,11 @@ async def get_connection():
 # ============================================================
 
 async def init_db():
-    """Создать таблицы (если их нет)"""
     url = get_database_url()
     
     if url:
-        # ==================== SUPABASE ====================
         conn = await asyncpg.connect(url)
         try:
-            # Таблица кланов
             await conn.execute('''
                 CREATE TABLE IF NOT EXISTS clans (
                     id INTEGER PRIMARY KEY,
@@ -73,7 +66,6 @@ async def init_db():
                 )
             ''')
             
-            # Таблица заявок
             await conn.execute('''
                 CREATE TABLE IF NOT EXISTS applications (
                     id SERIAL PRIMARY KEY,
@@ -92,7 +84,6 @@ async def init_db():
                 )
             ''')
             
-            # Таблица чёрного списка
             await conn.execute('''
                 CREATE TABLE IF NOT EXISTS blacklist (
                     id SERIAL PRIMARY KEY,
@@ -103,7 +94,6 @@ async def init_db():
                 )
             ''')
             
-            # Таблица ссылок на чаты
             await conn.execute('''
                 CREATE TABLE IF NOT EXISTS clan_links (
                     id SERIAL PRIMARY KEY,
@@ -113,7 +103,6 @@ async def init_db():
                 )
             ''')
             
-            # Заполняем кланы (если пусто)
             for clan in CLANS_DATA:
                 await conn.execute('''
                     INSERT INTO clans (id, name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name)
@@ -128,10 +117,8 @@ async def init_db():
         finally:
             await conn.close()
     else:
-        # ==================== SQLITE (локально) ====================
         import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
-            # Таблица кланов
+        async with aiosqlite.connect(DB_PATH) as db:
             await db.execute('''
                 CREATE TABLE IF NOT EXISTS clans (
                     id INTEGER PRIMARY KEY,
@@ -146,7 +133,6 @@ async def init_db():
                 )
             ''')
             
-            # Таблица заявок
             await db.execute('''
                 CREATE TABLE IF NOT EXISTS applications (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -165,7 +151,6 @@ async def init_db():
                 )
             ''')
             
-            # Таблица чёрного списка
             await db.execute('''
                 CREATE TABLE IF NOT EXISTS blacklist (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -176,7 +161,6 @@ async def init_db():
                 )
             ''')
             
-            # Таблица ссылок на чаты
             await db.execute('''
                 CREATE TABLE IF NOT EXISTS clan_links (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -186,7 +170,6 @@ async def init_db():
                 )
             ''')
             
-            # Заполняем кланы
             for clan in CLANS_DATA:
                 await db.execute('''
                     INSERT OR IGNORE INTO clans (id, name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name)
@@ -212,8 +195,7 @@ async def get_clans():
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute('SELECT * FROM clans ORDER BY id')
             return await cursor.fetchall()
 
@@ -228,8 +210,7 @@ async def get_clan(clan_id):
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute('SELECT * FROM clans WHERE id = ?', (clan_id,))
             return await cursor.fetchone()
 
@@ -244,8 +225,7 @@ async def get_clan_by_name(name):
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute('SELECT * FROM clans WHERE name = ?', (name,))
             return await cursor.fetchone()
 
@@ -260,8 +240,7 @@ async def get_clan_by_user(user_id):
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute('SELECT * FROM clans WHERE leader_id = ? OR deputy_id = ?', (user_id, user_id))
             return await cursor.fetchone()
 
@@ -282,8 +261,7 @@ async def update_clan_leader(clan_id, leader_id, leader_username, leader_name):
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             await db.execute('''
                 UPDATE clans SET leader_id = ?, leader_username = ?, leader_name = ?
                 WHERE id = ?
@@ -303,8 +281,7 @@ async def update_clan_deputy(clan_id, deputy_id, deputy_username, deputy_name):
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             await db.execute('''
                 UPDATE clans SET deputy_id = ?, deputy_username = ?, deputy_name = ?
                 WHERE id = ?
@@ -324,8 +301,7 @@ async def remove_clan_leader(clan_id):
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             await db.execute('''
                 UPDATE clans SET leader_id = NULL, leader_username = NULL, leader_name = NULL
                 WHERE id = ?
@@ -345,8 +321,7 @@ async def remove_clan_deputy(clan_id):
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             await db.execute('''
                 UPDATE clans SET deputy_id = NULL, deputy_username = NULL, deputy_name = NULL
                 WHERE id = ?
@@ -374,8 +349,7 @@ async def add_application(user_id, username, clan_id, answers):
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute('''
                 INSERT INTO applications (user_id, username, clan_id, answers)
                 VALUES (?, ?, ?, ?)
@@ -393,8 +367,7 @@ async def update_application_photo_old(app_id, photo_old_file_id):
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             await db.execute('UPDATE applications SET photo_old_file_id = ? WHERE id = ?', (photo_old_file_id, app_id))
             await db.commit()
 
@@ -408,8 +381,7 @@ async def update_application_photo_new(app_id, photo_new_file_id):
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             await db.execute('UPDATE applications SET photo_new_file_id = ? WHERE id = ?', (photo_new_file_id, app_id))
             await db.commit()
 
@@ -423,8 +395,7 @@ async def update_application_has_photos(app_id, count):
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             await db.execute('UPDATE applications SET has_photos = ? WHERE id = ?', (count, app_id))
             await db.commit()
 
@@ -438,8 +409,7 @@ async def update_application_chat(app_id, chat_id):
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             await db.execute('UPDATE applications SET chat_id = ? WHERE id = ?', (chat_id, app_id))
             await db.commit()
 
@@ -460,8 +430,7 @@ async def get_user_applications(user_id):
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute('''
                 SELECT a.*, c.name as clan_name 
                 FROM applications a
@@ -487,8 +456,7 @@ async def get_application_by_id(app_id):
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute('''
                 SELECT a.*, c.name as clan_name 
                 FROM applications a
@@ -510,8 +478,7 @@ async def get_pending_application(user_id, clan_id):
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute('''
                 SELECT * FROM applications WHERE user_id = ? AND clan_id = ? AND status = "pending"
             ''', (user_id, clan_id))
@@ -531,8 +498,7 @@ async def update_application_status(app_id, status, reviewer_id):
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             await db.execute('''
                 UPDATE applications 
                 SET status = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP
@@ -550,8 +516,7 @@ async def revoke_application(app_id):
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             await db.execute("UPDATE applications SET status = 'revoked' WHERE id = ?", (app_id,))
             await db.commit()
 
@@ -572,8 +537,7 @@ async def get_clan_applications(clan_id):
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute('''
                 SELECT a.*, c.name as clan_name 
                 FROM applications a
@@ -598,8 +562,7 @@ async def is_in_blacklist(user_id):
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute('SELECT * FROM blacklist WHERE user_id = ?', (user_id,))
             return await cursor.fetchone()
 
@@ -617,8 +580,7 @@ async def add_to_blacklist(user_id, reason, added_by):
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             await db.execute('''
                 INSERT OR REPLACE INTO blacklist (user_id, reason, added_by)
                 VALUES (?, ?, ?)
@@ -635,8 +597,7 @@ async def remove_from_blacklist(user_id):
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             await db.execute('DELETE FROM blacklist WHERE user_id = ?', (user_id,))
             await db.commit()
 
@@ -651,8 +612,7 @@ async def get_blacklist():
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute('SELECT * FROM blacklist ORDER BY created_at DESC')
             return await cursor.fetchall()
 
@@ -688,8 +648,7 @@ async def get_statistics():
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             stats_cursor = await db.execute('''
                 SELECT 
                     COUNT(*) as total,
@@ -730,8 +689,7 @@ async def get_all_applications():
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute('''
                 SELECT 
                     a.id, a.user_id, a.username, c.name as clan_name, a.answers,
@@ -758,8 +716,7 @@ async def get_clan_link(clan_id):
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute('SELECT chat_link FROM clan_links WHERE clan_id = ?', (clan_id,))
             result = await cursor.fetchone()
             return result[0] if result else None
@@ -778,8 +735,7 @@ async def set_clan_link(clan_id, chat_link):
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             await db.execute('''
                 INSERT OR REPLACE INTO clan_links (clan_id, chat_link, updated_at)
                 VALUES (?, ?, CURRENT_TIMESTAMP)
@@ -801,8 +757,7 @@ async def get_all_clan_links():
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute('''
                 SELECT c.name, cl.chat_link, cl.updated_at
                 FROM clan_links cl
@@ -816,7 +771,6 @@ async def get_all_clan_links():
 # ============================================================
 
 async def clear_test_applications():
-    """Удалить все тестовые заявки (username = 'test_user')"""
     url = get_database_url()
     if url:
         conn = await asyncpg.connect(url)
@@ -825,7 +779,44 @@ async def clear_test_applications():
         finally:
             await conn.close()
     else:
-        import aiosqlite
-        async with aiosqlite.connect('klan_kaif.db') as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             await db.execute("DELETE FROM applications WHERE username = 'test_user'")
             await db.commit()
+
+
+# ============================================================
+# 🔔 НАПОМИНАНИЯ О НЕРАССМОТРЕННЫХ ЗАЯВКАХ
+# ============================================================
+
+async def get_old_pending_applications():
+    """Получить заявки, которые ждут решения больше 24 часов"""
+    from datetime import datetime, timedelta
+    url = get_database_url()
+    cutoff = datetime.now() - timedelta(hours=24)
+    
+    if url:
+        conn = await asyncpg.connect(url)
+        try:
+            rows = await conn.fetch('''
+                SELECT a.*, c.name as clan_name, c.leader_id, c.leader_username, c.leader_name,
+                       c.deputy_id, c.deputy_username, c.deputy_name
+                FROM applications a
+                JOIN clans c ON a.clan_id = c.id
+                WHERE a.status = 'pending' AND a.created_at < $1
+                ORDER BY a.created_at ASC
+            ''', cutoff)
+            return [tuple(row) for row in rows]
+        finally:
+            await conn.close()
+    else:
+        import aiosqlite
+        async with aiosqlite.connect(DB_PATH) as db:
+            cursor = await db.execute('''
+                SELECT a.*, c.name as clan_name, c.leader_id, c.leader_username, c.leader_name,
+                       c.deputy_id, c.deputy_username, c.deputy_name
+                FROM applications a
+                JOIN clans c ON a.clan_id = c.id
+                WHERE a.status = 'pending' AND a.created_at < datetime('now', '-1 day')
+                ORDER BY a.created_at ASC
+            ''')
+            return await cursor.fetchall()
