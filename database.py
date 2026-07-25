@@ -38,7 +38,6 @@ async def get_connection():
     if url:
         return await asyncpg.connect(url)
     else:
-        import aiosqlite
         return await aiosqlite.connect(DB_PATH)
 
 
@@ -56,10 +55,10 @@ async def init_db():
                 CREATE TABLE IF NOT EXISTS clans (
                     id INTEGER PRIMARY KEY,
                     name TEXT UNIQUE NOT NULL,
-                    leader_id INTEGER,
+                    leader_id BIGINT,
                     leader_username TEXT,
                     leader_name TEXT,
-                    deputy_id INTEGER,
+                    deputy_id BIGINT,
                     deputy_username TEXT,
                     deputy_name TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -69,7 +68,7 @@ async def init_db():
             await conn.execute('''
                 CREATE TABLE IF NOT EXISTS applications (
                     id SERIAL PRIMARY KEY,
-                    user_id INTEGER NOT NULL,
+                    user_id BIGINT NOT NULL,
                     username TEXT,
                     clan_id INTEGER NOT NULL,
                     answers TEXT NOT NULL,
@@ -79,7 +78,7 @@ async def init_db():
                     chat_id INTEGER,
                     status TEXT DEFAULT 'pending',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    reviewed_by INTEGER,
+                    reviewed_by BIGINT,
                     reviewed_at TIMESTAMP
                 )
             ''')
@@ -87,9 +86,9 @@ async def init_db():
             await conn.execute('''
                 CREATE TABLE IF NOT EXISTS blacklist (
                     id SERIAL PRIMARY KEY,
-                    user_id INTEGER NOT NULL UNIQUE,
+                    user_id BIGINT NOT NULL UNIQUE,
                     reason TEXT,
-                    added_by INTEGER,
+                    added_by BIGINT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
@@ -117,7 +116,6 @@ async def init_db():
         finally:
             await conn.close()
     else:
-        import aiosqlite
         async with aiosqlite.connect(DB_PATH) as db:
             await db.execute('''
                 CREATE TABLE IF NOT EXISTS clans (
@@ -254,18 +252,14 @@ async def update_clan_leader(clan_id, leader_id, leader_username, leader_name):
     if url:
         conn = await asyncpg.connect(url)
         try:
-            await conn.execute('''
-                UPDATE clans SET leader_id = $1, leader_username = $2, leader_name = $3
-                WHERE id = $4
-            ''', leader_id, leader_username, leader_name, clan_id)
+            await conn.execute('UPDATE clans SET leader_id = $1, leader_username = $2, leader_name = $3 WHERE id = $4',
+                               leader_id, leader_username, leader_name, clan_id)
         finally:
             await conn.close()
     else:
         async with aiosqlite.connect(DB_PATH) as db:
-            await db.execute('''
-                UPDATE clans SET leader_id = ?, leader_username = ?, leader_name = ?
-                WHERE id = ?
-            ''', (leader_id, leader_username, leader_name, clan_id))
+            await db.execute('UPDATE clans SET leader_id = ?, leader_username = ?, leader_name = ? WHERE id = ?',
+                             (leader_id, leader_username, leader_name, clan_id))
             await db.commit()
 
 
@@ -274,18 +268,14 @@ async def update_clan_deputy(clan_id, deputy_id, deputy_username, deputy_name):
     if url:
         conn = await asyncpg.connect(url)
         try:
-            await conn.execute('''
-                UPDATE clans SET deputy_id = $1, deputy_username = $2, deputy_name = $3
-                WHERE id = $4
-            ''', deputy_id, deputy_username, deputy_name, clan_id)
+            await conn.execute('UPDATE clans SET deputy_id = $1, deputy_username = $2, deputy_name = $3 WHERE id = $4',
+                               deputy_id, deputy_username, deputy_name, clan_id)
         finally:
             await conn.close()
     else:
         async with aiosqlite.connect(DB_PATH) as db:
-            await db.execute('''
-                UPDATE clans SET deputy_id = ?, deputy_username = ?, deputy_name = ?
-                WHERE id = ?
-            ''', (deputy_id, deputy_username, deputy_name, clan_id))
+            await db.execute('UPDATE clans SET deputy_id = ?, deputy_username = ?, deputy_name = ? WHERE id = ?',
+                             (deputy_id, deputy_username, deputy_name, clan_id))
             await db.commit()
 
 
@@ -294,18 +284,12 @@ async def remove_clan_leader(clan_id):
     if url:
         conn = await asyncpg.connect(url)
         try:
-            await conn.execute('''
-                UPDATE clans SET leader_id = NULL, leader_username = NULL, leader_name = NULL
-                WHERE id = $1
-            ''', clan_id)
+            await conn.execute('UPDATE clans SET leader_id = NULL, leader_username = NULL, leader_name = NULL WHERE id = $1', clan_id)
         finally:
             await conn.close()
     else:
         async with aiosqlite.connect(DB_PATH) as db:
-            await db.execute('''
-                UPDATE clans SET leader_id = NULL, leader_username = NULL, leader_name = NULL
-                WHERE id = ?
-            ''', (clan_id,))
+            await db.execute('UPDATE clans SET leader_id = NULL, leader_username = NULL, leader_name = NULL WHERE id = ?', (clan_id,))
             await db.commit()
 
 
@@ -314,18 +298,12 @@ async def remove_clan_deputy(clan_id):
     if url:
         conn = await asyncpg.connect(url)
         try:
-            await conn.execute('''
-                UPDATE clans SET deputy_id = NULL, deputy_username = NULL, deputy_name = NULL
-                WHERE id = $1
-            ''', clan_id)
+            await conn.execute('UPDATE clans SET deputy_id = NULL, deputy_username = NULL, deputy_name = NULL WHERE id = $1', clan_id)
         finally:
             await conn.close()
     else:
         async with aiosqlite.connect(DB_PATH) as db:
-            await db.execute('''
-                UPDATE clans SET deputy_id = NULL, deputy_username = NULL, deputy_name = NULL
-                WHERE id = ?
-            ''', (clan_id,))
+            await db.execute('UPDATE clans SET deputy_id = NULL, deputy_username = NULL, deputy_name = NULL WHERE id = ?', (clan_id,))
             await db.commit()
 
 
@@ -340,20 +318,15 @@ async def add_application(user_id, username, clan_id, answers):
     if url:
         conn = await asyncpg.connect(url)
         try:
-            row = await conn.fetchrow('''
-                INSERT INTO applications (user_id, username, clan_id, answers)
-                VALUES ($1, $2, $3, $4)
-                RETURNING id
-            ''', user_id, username, clan_id, answers_json)
+            row = await conn.fetchrow('INSERT INTO applications (user_id, username, clan_id, answers) VALUES ($1, $2, $3, $4) RETURNING id',
+                                      user_id, username, clan_id, answers_json)
             return row['id']
         finally:
             await conn.close()
     else:
         async with aiosqlite.connect(DB_PATH) as db:
-            cursor = await db.execute('''
-                INSERT INTO applications (user_id, username, clan_id, answers)
-                VALUES (?, ?, ?, ?)
-            ''', (user_id, username, clan_id, answers_json))
+            cursor = await db.execute('INSERT INTO applications (user_id, username, clan_id, answers) VALUES (?, ?, ?, ?)',
+                                      (user_id, username, clan_id, answers_json))
             await db.commit()
             return cursor.lastrowid
 
@@ -471,17 +444,15 @@ async def get_pending_application(user_id, clan_id):
     if url:
         conn = await asyncpg.connect(url)
         try:
-            row = await conn.fetchrow('''
-                SELECT * FROM applications WHERE user_id = $1 AND clan_id = $2 AND status = 'pending'
-            ''', user_id, clan_id)
+            row = await conn.fetchrow('SELECT * FROM applications WHERE user_id = $1 AND clan_id = $2 AND status = $3',
+                                      user_id, clan_id, 'pending')
             return tuple(row) if row else None
         finally:
             await conn.close()
     else:
         async with aiosqlite.connect(DB_PATH) as db:
-            cursor = await db.execute('''
-                SELECT * FROM applications WHERE user_id = ? AND clan_id = ? AND status = "pending"
-            ''', (user_id, clan_id))
+            cursor = await db.execute('SELECT * FROM applications WHERE user_id = ? AND clan_id = ? AND status = "pending"',
+                                      (user_id, clan_id))
             return await cursor.fetchone()
 
 
@@ -490,20 +461,14 @@ async def update_application_status(app_id, status, reviewer_id):
     if url:
         conn = await asyncpg.connect(url)
         try:
-            await conn.execute('''
-                UPDATE applications 
-                SET status = $1, reviewed_by = $2, reviewed_at = CURRENT_TIMESTAMP
-                WHERE id = $3
-            ''', status, reviewer_id, app_id)
+            await conn.execute('UPDATE applications SET status = $1, reviewed_by = $2, reviewed_at = CURRENT_TIMESTAMP WHERE id = $3',
+                               status, reviewer_id, app_id)
         finally:
             await conn.close()
     else:
         async with aiosqlite.connect(DB_PATH) as db:
-            await db.execute('''
-                UPDATE applications 
-                SET status = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP
-                WHERE id = ?
-            ''', (status, reviewer_id, app_id))
+            await db.execute('UPDATE applications SET status = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP WHERE id = ?',
+                             (status, reviewer_id, app_id))
             await db.commit()
 
 
@@ -564,7 +529,7 @@ async def is_in_blacklist(user_id):
     else:
         async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute('SELECT * FROM blacklist WHERE user_id = ?', (user_id,))
-            return await cursor.fetchone()
+            return await cursor.fetchone() is not None
 
 
 async def add_to_blacklist(user_id, reason, added_by):
@@ -572,19 +537,14 @@ async def add_to_blacklist(user_id, reason, added_by):
     if url:
         conn = await asyncpg.connect(url)
         try:
-            await conn.execute('''
-                INSERT INTO blacklist (user_id, reason, added_by)
-                VALUES ($1, $2, $3)
-                ON CONFLICT (user_id) DO UPDATE SET reason = $2, added_by = $3
-            ''', user_id, reason, added_by)
+            await conn.execute('INSERT INTO blacklist (user_id, reason, added_by) VALUES ($1, $2, $3) ON CONFLICT (user_id) DO UPDATE SET reason = $2, added_by = $3',
+                               user_id, reason, added_by)
         finally:
             await conn.close()
     else:
         async with aiosqlite.connect(DB_PATH) as db:
-            await db.execute('''
-                INSERT OR REPLACE INTO blacklist (user_id, reason, added_by)
-                VALUES (?, ?, ?)
-            ''', (user_id, reason, added_by))
+            await db.execute('INSERT OR REPLACE INTO blacklist (user_id, reason, added_by) VALUES (?, ?, ?)',
+                             (user_id, reason, added_by))
             await db.commit()
 
 
@@ -789,7 +749,6 @@ async def clear_test_applications():
 # ============================================================
 
 async def get_old_pending_applications():
-    """Получить заявки, которые ждут решения больше 24 часов"""
     from datetime import datetime, timedelta
     url = get_database_url()
     cutoff = datetime.now() - timedelta(hours=24)
@@ -809,7 +768,6 @@ async def get_old_pending_applications():
         finally:
             await conn.close()
     else:
-        import aiosqlite
         async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute('''
                 SELECT a.*, c.name as clan_name, c.leader_id, c.leader_username, c.leader_name,
