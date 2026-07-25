@@ -90,7 +90,7 @@ def exit_test_button():
 
 def back_button(callback_data='back_to_main'):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='🔙 Назад', callback_data=callback_data)],
+        [InlineKeyboardButton(text='🔙 Назад', callback_data=callback_data)]
     ])
 
 
