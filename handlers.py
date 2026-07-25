@@ -607,7 +607,13 @@ async def my_clan_applications(callback: CallbackQuery):
         app_id, user_id, username, clan_id_db, answers_json, photo_old, photo_new, has_photos, chat_id, status, created_at, reviewed_by, reviewed_at, clan_name = app
         emoji = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][idx - 1] if idx <= 5 else '🔹'
         text += f'{emoji} #{app_id} — @{username} — {status_emoji.get(status, status)}\n'
-        text += f'   📅 {created_at[:10]}, {created_at[11:16]}\n'
+        
+        # ИСПРАВЛЕННАЯ СТРОКА — ФОРМАТИРУЕМ ДАТУ
+        if isinstance(created_at, datetime):
+            text += f'   📅 {created_at.strftime("%Y-%m-%d")}, {created_at.strftime("%H:%M")}\n'
+        else:
+            text += f'   📅 {created_at[:10]}, {created_at[11:16]}\n'
+        
         text += f'   📸 {has_photos} фото\n'
         text += '\n'
 
@@ -615,7 +621,6 @@ async def my_clan_applications(callback: CallbackQuery):
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
     await callback.message.edit_text(text, reply_markup=keyboard)
-
 
 # ============================================================
 # 📝 ПОДАТЬ АНКЕТУ
