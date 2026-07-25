@@ -1124,6 +1124,84 @@ async def contact_application(callback: CallbackQuery, state: FSMContext):
             reply_markup=contact_menu(app_id)
         )
 
+
+# ============================================================
+# 📤 ОТПРАВИТЬ ССЫЛКУ (ДЛЯ ЛИДЕРОВ/ЗАМОВ)
+# ============================================================
+
+@router.callback_query(F.data.startswith('send_link_'))
+async def send_link(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    
+    # Получаем ID заявки из callback_data
+    app_id = int(callback.data.split('_')[2])
+    
+    # Проверяем, есть ли у пользователя права (лидер или зам)
+    clan = await get_clan_by_user(callback.from_user.id)
+    if not clan:
+        await callback.message.answer('⛔ У вас нет прав на это действие')
+        return
+    
+    # Получаем данные заявки
+    app = await get_application_by_id(app_id)
+    if not app:
+        await callback.message.answer('❌ Заявка не найдена')
+        return
+    
+    # Распаковываем данные клана
+    clan_id, clan_name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, _ = clan
+    
+    # Получаем ссылку на чат
+    link = await get_clan_link(clan_id)
+    if not link:
+        await callback.message.answer(
+            '❌ Ссылка на чат не найдена.\n'
+            'Сначала добавьте её через «🔗 Добавить ссылку».'
+        )
+        return
+    
+    # ID лидеров кланов для игры
+    clan_ids = {
+        'KAIF': '51656781871',
+        'KAIF ESPORTS': '51600572333',
+        'KAIF METRO': '51954255028',
+        'NA KAIFE': '51768659282'
+    }
+    clan_id_game = clan_ids.get(clan_name, 'не указан')
+    
+    # Определяем, кто отправляет
+    if callback.from_user.id == leader_id:
+        sender = f"👑 Лидер клана {clan_name} — {leader_name}"
+    elif callback.from_user.id == deputy_id:
+        sender = f"👤 Зам клана {clan_name} — {deputy_name}"
+    else:
+        sender = f"Администрация {clan_name}"
+    
+    # Формируем сообщение
+    message_text = (
+        f'🎉 ПОЗДРАВЛЯЕМ!\n\n'
+        f'Вы прошли отбор и официально приняты в клан {clan_name}!\n\n'
+        f'Добро пожаловать в нашу дружную команду! Мы рады, что ты с нами. Впереди — совместные игры, турниры, тренировки и новые достижения.\n\n'
+        f'🔥 Сделай ник с припиской KAIF\n\n'
+        f'📌 Ссылка на чат клана: {link}\n\n'
+        f'🆔 ID лидера для подачи заявки в игре: {clan_id_game}\n\n'
+        f'📩 Отправил: {sender}\n\n'
+        f'С уважением, администрация {clan_name} ❤️'
+    )
+    
+    # Отправляем сообщение кандидату
+    try:
+        await callback.bot.send_message(
+            app[1],  # user_id кандидата
+            message_text
+        )
+        await callback.message.answer(f'✅ Ссылка отправлена кандидату @{app[2]}!')
+    except Exception as e:
+        await callback.message.answer(f'❌ Не удалось отправить сообщение. Ошибка: {e}')
+    
+    await state.clear()
+
+
 # ============================================================
 # ✏️ НАПИСАТЬ СООБЩЕНИЕ (ДЛЯ ЛИДЕРОВ/ЗАМОВ)
 # ============================================================
@@ -1198,7 +1276,70 @@ async def edit_link(callback: CallbackQuery, state: FSMContext):
 
 
 # ============================================================
-# 📤 ОТПРАВИТЬ СООБЩЕНИЕ (С ФОРМАТИРОВАННЫМ ТЕКСТОМ)
+# 📨 ПОЛУЧЕНИЕ СООБЩЕНИЯ (ДЛЯ ДОБАВЛЕНИЯ ССЫЛКИ И СООБЩЕНИЙ)
+# ============================================================
+
+@router.message(ApplicationForm.waiting_contact_message)
+async def handle_contact_message(message: Message, state: FSMContext):
+    data = await state.get_data()
+    app_id = data.get('contact_app_id') or data.get('send_app_id')
+    link_action = data.get('link_action')
+
+    if not app_id:
+        await message.answer('❌ Ошибка. Попробуйте снова.', reply_markup=main_menu())
+        await state.clear()
+        return
+
+    app = await get_application_by_id(app_id)
+    if not app:
+        await message.answer('❌ Заявка не найдена')
+        await state.clear()
+        return
+
+    # Если это действие по добавлению/изменению ссылки
+    if link_action in ['add', 'edit']:
+        # Получаем клан из заявки
+        clan_id = app[3]  # clan_id находится на позиции 3 в кортеже заявки
+        link = message.text.strip()
+
+        print(f"🔍 СОХРАНЯЕМ ССЫЛКУ: clan_id={clan_id}, link={link}")
+
+        await set_clan_link(clan_id, link)
+
+        action_text = 'добавлена' if link_action == 'add' else 'обновлена'
+        await message.answer(f'✅ Ссылка на чат клана {action_text}!\n\nТекущая ссылка: {link}')
+        await state.clear()
+        return
+
+    # Если это сообщение для кандидата
+    if link_action == 'message':
+        try:
+            await message.bot.send_message(
+                app[1],
+                f'📩 Сообщение от лидера/зама клана {app[12]}:\n\n{message.text}'
+            )
+            await message.answer(f'✅ Сообщение отправлено кандидату @{app[2]}!')
+        except Exception as e:
+            await message.answer(f'❌ Не удалось отправить сообщение. Ошибка: {e}')
+        
+        await state.clear()
+        return
+
+    # Если это просто сообщение для кандидата (старая логика)
+    try:
+        await message.bot.send_message(
+            app[1],
+            f'📩 Сообщение от лидера клана {app[12]}:\n\n{message.text}'
+        )
+        await message.answer(f'✅ Сообщение отправлено кандидату @{app[2]}!')
+    except Exception as e:
+        await message.answer(f'❌ Не удалось отправить сообщение. Ошибка: {e}')
+
+    await state.clear()
+
+
+# ============================================================
+# 📤 ОТПРАВИТЬ СООБЩЕНИЕ (С ФОРМАТИРОВАННЫМ ТЕКСТОМ) - СТАРЫЙ ОБРАБОТЧИК
 # ============================================================
 
 @router.callback_query(F.data.startswith('send_message_'))
@@ -1259,69 +1400,6 @@ async def send_message(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer(f'✅ Сообщение отправлено кандидату @{app[2]}!')
     except Exception as e:
         await callback.message.answer(f'❌ Не удалось отправить сообщение. Ошибка: {e}')
-
-    await state.clear()
-
-
-# ============================================================
-# 📨 ПОЛУЧЕНИЕ СООБЩЕНИЯ (ДЛЯ ДОБАВЛЕНИЯ ССЫЛКИ И СООБЩЕНИЙ)
-# ============================================================
-
-@router.message(ApplicationForm.waiting_contact_message)
-async def handle_contact_message(message: Message, state: FSMContext):
-    data = await state.get_data()
-    app_id = data.get('contact_app_id') or data.get('send_app_id')
-    link_action = data.get('link_action')
-
-    if not app_id:
-        await message.answer('❌ Ошибка. Попробуйте снова.', reply_markup=main_menu())
-        await state.clear()
-        return
-
-    app = await get_application_by_id(app_id)
-    if not app:
-        await message.answer('❌ Заявка не найдена')
-        await state.clear()
-        return
-
-    # Если это действие по добавлению/изменению ссылки
-    if link_action in ['add', 'edit']:
-        # Получаем клан из заявки
-        clan_id = app[3]  # clan_id находится на позиции 3 в кортеже заявки
-        link = message.text.strip()
-
-        print(f"🔍 СОХРАНЯЕМ ССЫЛКУ: clan_id={clan_id}, link={link}")
-
-        await set_clan_link(clan_id, link)
-
-        action_text = 'добавлена' if link_action == 'add' else 'обновлена'
-        await message.answer(f'✅ Ссылка на чат клана {action_text}!\n\nТекущая ссылка: {link}')
-        await state.clear()
-        return
-
-    # Если это сообщение для кандидата
-    if link_action == 'message':
-        try:
-            await message.bot.send_message(
-                app[1],
-                f'📩 Сообщение от лидера/зама клана {app[12]}:\n\n{message.text}'
-            )
-            await message.answer(f'✅ Сообщение отправлено кандидату @{app[2]}!')
-        except Exception as e:
-            await message.answer(f'❌ Не удалось отправить сообщение. Ошибка: {e}')
-        
-        await state.clear()
-        return
-
-    # Если это просто сообщение для кандидата (старая логика)
-    try:
-        await message.bot.send_message(
-            app[1],
-            f'📩 Сообщение от лидера клана {app[12]}:\n\n{message.text}'
-        )
-        await message.answer(f'✅ Сообщение отправлено кандидату @{app[2]}!')
-    except Exception as e:
-        await message.answer(f'❌ Не удалось отправить сообщение. Ошибка: {e}')
 
     await state.clear()
 
