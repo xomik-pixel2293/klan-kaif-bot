@@ -193,7 +193,8 @@ def copy_template_button(template):
 
 def contact_menu(app_id):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='📤 Отправить сообщение', callback_data=f'send_message_{app_id}')],
+        [InlineKeyboardButton(text='📤 Отправить ссылку', callback_data=f'send_link_{app_id}')],
+        [InlineKeyboardButton(text='✏️ Написать сообщение', callback_data=f'send_message_{app_id}')],
         [InlineKeyboardButton(text='🔗 Добавить ссылку', callback_data=f'add_link_{app_id}')],
         [InlineKeyboardButton(text='✏️ Изменить ссылку', callback_data=f'edit_link_{app_id}')],
         [InlineKeyboardButton(text='🔙 Отмена', callback_data='back_to_main')],
@@ -202,7 +203,8 @@ def contact_menu(app_id):
 
 def contact_with_link(app_id, link):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='📤 Отправить сообщение', callback_data=f'send_message_{app_id}')],
+        [InlineKeyboardButton(text='📤 Отправить ссылку', callback_data=f'send_link_{app_id}')],
+        [InlineKeyboardButton(text='✏️ Написать сообщение', callback_data=f'send_message_{app_id}')],
         [InlineKeyboardButton(text='✏️ Изменить ссылку', callback_data=f'edit_link_{app_id}')],
         [InlineKeyboardButton(text='🔙 Отмена', callback_data='back_to_main')],
     ])
