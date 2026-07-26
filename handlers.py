@@ -1912,12 +1912,23 @@ async def admin_export(callback: CallbackQuery):
         }
 
         for app in apps:
-            # ✅ РАСПАКОВКА С clan_name (уже из JOIN в get_all_applications)
+            # ✅ ПРАВИЛЬНАЯ РАСПАКОВКА (все поля)
             (app_id, user_id, username, clan_name, answers_json,
              photo_old, photo_new, has_photos, status,
              created_at, reviewed_by, reviewed_at) = app
 
             answers = json.loads(answers_json)
+
+            # ✅ ОБРАБОТКА ДАТЫ
+            if isinstance(created_at, datetime):
+                created_at_str = created_at.strftime('%d.%m.%Y %H:%M')
+            else:
+                created_at_str = str(created_at)[:16] if created_at else ''
+
+            if isinstance(reviewed_at, datetime):
+                reviewed_at_str = reviewed_at.strftime('%d.%m.%Y %H:%M')
+            else:
+                reviewed_at_str = str(reviewed_at)[:16] if reviewed_at else ''
 
             is_test = username == 'test_user' or 'Тест' in answers.get('name', '')
 
@@ -1936,7 +1947,7 @@ async def admin_export(callback: CallbackQuery):
                 try:
                     async with aiosqlite.connect(DB_PATH) as db:
                         async with db.execute(
-                            'SELECT username FROM applications WHERE reviewed_by = ? LIMIT 1',
+                            'SELECT username FROM applications WHERE user_id = ? LIMIT 1',
                             (reviewed_by,)
                         ) as cursor:
                             result = await cursor.fetchone()
@@ -1954,10 +1965,10 @@ async def admin_export(callback: CallbackQuery):
                 '✅' if photo_new else '❌',
                 has_photos,
                 status_ru,
-                created_at[:10] if created_at else '',
+                created_at_str,
                 reviewed_by if reviewed_by else '',
                 reviewer_username,
-                reviewed_at[:16] if reviewed_at else ''
+                reviewed_at_str
             ]
             ws.append(row)
 
@@ -2008,6 +2019,8 @@ async def admin_export(callback: CallbackQuery):
         )
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         await callback.message.answer(f'❌ Ошибка при экспорте: {e}')
 
 # ============================================================
