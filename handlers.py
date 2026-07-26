@@ -1887,7 +1887,7 @@ async def admin_export(callback: CallbackQuery):
         headers = [
             'ID', 'User ID', 'Username', 'Клан', 'Имя', 'Возраст',
             'Ник', 'ID игровой', 'Часовой пояс', 'Скрин прошлый',
-            'Скрин текущий', 'Статус', 'Дата создания',
+            'Скрин текущий', 'Количество фото', 'Статус', 'Дата создания',
             'Кто одобрил (ID)', 'Кто одобрил (Username)', 'Дата одобрения'
         ]
         ws.append(headers)
@@ -1910,11 +1910,41 @@ async def admin_export(callback: CallbackQuery):
         }
 
         for app in apps:
-            (app_id, user_id, username, clan_name, answers_json,
-             photo_old, photo_new, has_photos, chat_id, status,
-             created_at, reviewed_by, reviewed_at) = app
+            # ============================================================
+            # 📌 УНИВЕРСАЛЬНАЯ РАСПАКОВКА
+            # ============================================================
+            
+            # Базовые поля (есть у всех)
+            app_id = app[0]
+            user_id = app[1]
+            username = app[2]
+            clan_id = app[3]
+            answers_json = app[4]
+            photo_old = app[5]
+            photo_new = app[6]
+            has_photos = app[7]
+            
+            # Статус — всегда на позиции, где status (обычно 9 или 10)
+            # Определяем по имени поля
+            status_idx = 9 if len(app) > 10 else 10
+            status = app[status_idx]
+            
+            # Дата создания — обычно перед reviewed_by
+            created_at = app[status_idx + 1] if len(app) > status_idx + 1 else None
+            
+            # Кто одобрил и дата — если есть
+            reviewed_by = None
+            reviewed_at = None
+            if len(app) > status_idx + 2:
+                reviewed_by = app[status_idx + 2]
+            if len(app) > status_idx + 3:
+                reviewed_at = app[status_idx + 3]
 
             answers = json.loads(answers_json)
+
+            # Получаем название клана
+            clan = await get_clan(clan_id)
+            clan_name = clan[1] if clan else 'Неизвестно'
 
             is_test = username == 'test_user' or 'Тест' in answers.get('name', '')
 
@@ -1949,6 +1979,7 @@ async def admin_export(callback: CallbackQuery):
                 answers.get('timezone', ''),
                 '✅' if photo_old else '❌',
                 '✅' if photo_new else '❌',
+                has_photos,
                 status_ru,
                 created_at[:10] if created_at else '',
                 reviewed_by if reviewed_by else '',
@@ -1976,7 +2007,7 @@ async def admin_export(callback: CallbackQuery):
                     fill = status_colors['revoked']
                     font_color = "000000"
 
-            status_cell = ws.cell(row=row_num, column=12)
+            status_cell = ws.cell(row=row_num, column=13)
             status_cell.fill = fill
             status_cell.font = Font(bold=True, color=font_color, size=10)
             status_cell.alignment = Alignment(horizontal="center", vertical="center")
