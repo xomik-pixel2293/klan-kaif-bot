@@ -1912,41 +1912,12 @@ async def admin_export(callback: CallbackQuery):
         }
 
         for app in apps:
-            # ============================================================
-            # 📌 УНИВЕРСАЛЬНАЯ РАСПАКОВКА
-            # ============================================================
-            
-            # Базовые поля (есть у всех)
-            app_id = app[0]
-            user_id = app[1]
-            username = app[2]
-            clan_id = app[3]
-            answers_json = app[4]
-            photo_old = app[5]
-            photo_new = app[6]
-            has_photos = app[7]
-            
-            # Статус — всегда на позиции, где status (обычно 9 или 10)
-            # Определяем по имени поля
-            status_idx = 9 if len(app) > 10 else 10
-            status = app[status_idx]
-            
-            # Дата создания — обычно перед reviewed_by
-            created_at = app[status_idx + 1] if len(app) > status_idx + 1 else None
-            
-            # Кто одобрил и дата — если есть
-            reviewed_by = None
-            reviewed_at = None
-            if len(app) > status_idx + 2:
-                reviewed_by = app[status_idx + 2]
-            if len(app) > status_idx + 3:
-                reviewed_at = app[status_idx + 3]
+            # ✅ РАСПАКОВКА С clan_name (уже из JOIN в get_all_applications)
+            (app_id, user_id, username, clan_name, answers_json,
+             photo_old, photo_new, has_photos, status,
+             created_at, reviewed_by, reviewed_at) = app
 
             answers = json.loads(answers_json)
-
-            # Получаем название клана
-            clan = await get_clan(clan_id)
-            clan_name = clan[1] if clan else 'Неизвестно'
 
             is_test = username == 'test_user' or 'Тест' in answers.get('name', '')
 
@@ -2033,12 +2004,11 @@ async def admin_export(callback: CallbackQuery):
         from aiogram.types import BufferedInputFile
         await callback.message.answer_document(
             document=BufferedInputFile(output.getvalue(), filename='заявки.xlsx'),
-            caption='📊 Все заявки в формате Excel с цветами!'
+            caption='📊 Все заявки в формате Excel с цветами!\n\n✅ Добавлены колонки: Кто одобрил, Дата одобрения, Количество фото'
         )
 
     except Exception as e:
         await callback.message.answer(f'❌ Ошибка при экспорте: {e}')
-
 
 # ============================================================
 # 📊 АДМИН: СТАТИСТИКА
