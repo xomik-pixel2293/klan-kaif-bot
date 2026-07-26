@@ -1911,15 +1911,24 @@ async def admin_export(callback: CallbackQuery):
             'revoked': PatternFill(start_color="A6A6A6", end_color="A6A6A6", fill_type="solid"),
         }
 
+        # 🔥 ПОЛУЧАЕМ СПИСОК ВСЕХ РУКОВОДИТЕЛЕЙ ДЛЯ ПОИСКА ИМЁН
+        all_leaders = {}
+        clans = await get_clans()
+        for clan in clans:
+            clan_id, name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, _ = clan
+            if leader_id:
+                all_leaders[leader_id] = leader_username or str(leader_id)
+            if deputy_id:
+                all_leaders[deputy_id] = deputy_username or str(deputy_id)
+
         for app in apps:
-            # ✅ ПРАВИЛЬНАЯ РАСПАКОВКА (все поля)
             (app_id, user_id, username, clan_name, answers_json,
              photo_old, photo_new, has_photos, status,
              created_at, reviewed_by, reviewed_at) = app
 
             answers = json.loads(answers_json)
 
-            # ✅ ОБРАБОТКА ДАТЫ
+            # Обработка даты
             if isinstance(created_at, datetime):
                 created_at_str = created_at.strftime('%d.%m.%Y %H:%M')
             else:
@@ -1942,18 +1951,26 @@ async def admin_export(callback: CallbackQuery):
             if is_test:
                 status_ru = '🧪 ' + status_ru + ' (ТЕСТ)'
 
+            # ✅ ПРАВИЛЬНОЕ ПОЛУЧЕНИЕ USERNAME КТО ОДОБРИЛ
             reviewer_username = ''
             if reviewed_by:
-                try:
-                    async with aiosqlite.connect(DB_PATH) as db:
-                        async with db.execute(
-                            'SELECT username FROM applications WHERE user_id = ? LIMIT 1',
-                            (reviewed_by,)
-                        ) as cursor:
-                            result = await cursor.fetchone()
-                            if result:
-                                reviewer_username = result[0]
-                except:
+                # Сначала ищем среди руководителей кланов
+                reviewer_username = all_leaders.get(reviewed_by, '')
+                if not reviewer_username:
+                    # Если не нашли — пробуем найти в заявках (на случай если одобрил админ)
+                    try:
+                        async with aiosqlite.connect(DB_PATH) as db:
+                            async with db.execute(
+                                'SELECT username FROM applications WHERE user_id = ? LIMIT 1',
+                                (reviewed_by,)
+                            ) as cursor:
+                                result = await cursor.fetchone()
+                                if result:
+                                    reviewer_username = result[0]
+                    except:
+                        pass
+                # Если всё ещё пусто — ставим ID
+                if not reviewer_username:
                     reviewer_username = str(reviewed_by)
 
             row = [
