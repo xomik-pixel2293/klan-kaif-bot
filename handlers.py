@@ -255,6 +255,8 @@ async def test_select_clan(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
     clan_id = int(callback.data.split('_')[2])
+    
+    # Получаем данные клана
     clan = await get_clan(clan_id)
     if not clan:
         await callback.message.answer('❌ Клан не найден')
