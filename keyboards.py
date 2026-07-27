@@ -1,5 +1,5 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from database import get_clans_with_status  # 🔥 НУЖНО ДОБАВИТЬ ИМПОРТ
+from database import get_clans_with_status
 
 
 # ============================================================
@@ -24,7 +24,15 @@ def leader_menu():
 
 async def clan_choice():
     """Клавиатура выбора клана (только активные)"""
-    clans = await get_clans_with_status()
+    try:
+        clans = await get_clans_with_status()
+    except Exception as e:
+        print(f"❌ Ошибка получения кланов: {e}")
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text='❌ Ошибка загрузки', callback_data='noop')],
+            [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_main')],
+        ])
+    
     buttons = []
     emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣'}
     
@@ -216,7 +224,15 @@ def test_application_menu():
 
 async def clan_choice_for_test():
     """Клавиатура выбора клана для тестовой анкеты (только активные)"""
-    clans = await get_clans_with_status()
+    try:
+        clans = await get_clans_with_status()
+    except Exception as e:
+        print(f"❌ Ошибка получения кланов: {e}")
+        return InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text='❌ Ошибка загрузки', callback_data='noop')],
+            [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_test')],
+        ])
+    
     buttons = []
     emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣'}
     
