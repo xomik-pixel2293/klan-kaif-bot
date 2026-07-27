@@ -22,12 +22,17 @@ def leader_menu():
     ])
 
 
+# ============================================================
+# 🎯 ВЫБОР КЛАНА — ГЛАВНАЯ ФУНКЦИЯ
+# ============================================================
+
 async def clan_choice():
     """Клавиатура выбора клана (только активные)"""
     try:
         clans = await get_clans_with_status()
     except Exception as e:
         print(f"❌ Ошибка получения кланов: {e}")
+        # Если ошибка — показываем заглушку
         return InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text='❌ Ошибка загрузки', callback_data='noop')],
             [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_main')],
