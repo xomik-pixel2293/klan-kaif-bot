@@ -51,66 +51,28 @@ async def init_db():
     if url:
         conn = await asyncpg.connect(url)
         try:
-            await conn.execute('''
-                CREATE TABLE IF NOT EXISTS clans (
-                    id INTEGER PRIMARY KEY,
-                    name TEXT UNIQUE NOT NULL,
-                    emoji TEXT,
-                    leader_id BIGINT,
-                    leader_username TEXT,
-                    leader_name TEXT,
-                    deputy_id BIGINT,
-                    deputy_username TEXT,
-                    deputy_name TEXT,
-                    is_active BOOLEAN DEFAULT TRUE,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            
-            await conn.execute('''
-                CREATE TABLE IF NOT EXISTS applications (
-                    id SERIAL PRIMARY KEY,
-                    user_id BIGINT NOT NULL,
-                    username TEXT,
-                    clan_id INTEGER NOT NULL,
-                    answers TEXT NOT NULL,
-                    photo_old_file_id TEXT,
-                    photo_new_file_id TEXT,
-                    has_photos INTEGER DEFAULT 0,
-                    chat_id INTEGER,
-                    status TEXT DEFAULT 'pending',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    reviewed_by BIGINT,
-                    reviewed_at TIMESTAMP
-                )
-            ''')
-            
-            await conn.execute('''
-                CREATE TABLE IF NOT EXISTS blacklist (
-                    id SERIAL PRIMARY KEY,
-                    user_id BIGINT NOT NULL UNIQUE,
-                    reason TEXT,
-                    added_by BIGINT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            
-            await conn.execute('''
-                CREATE TABLE IF NOT EXISTS clan_links (
-                    id SERIAL PRIMARY KEY,
-                    clan_id INTEGER NOT NULL,
-                    chat_link TEXT,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            
-            # Добавляем колонку is_active если её нет
+            # ✅ ДОБАВЛЯЕМ КОЛОНКИ В СУЩЕСТВУЮЩУЮ ТАБЛИЦУ
+            # Сначала добавляем emoji (если её нет)
             try:
-                await conn.execute('ALTER TABLE clans ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE')
-            except:
-                pass
+                await conn.execute('ALTER TABLE clans ADD COLUMN emoji TEXT DEFAULT "🔵"')
+                print("✅ Добавлена колонка emoji")
+            except Exception as e:
+                if 'already exists' in str(e).lower() or 'duplicate' in str(e).lower():
+                    print("ℹ️ Колонка emoji уже существует")
+                else:
+                    print(f"⚠️ Ошибка при добавлении emoji: {e}")
             
-            # Вставляем или обновляем кланы
+            # Добавляем is_active (если её нет)
+            try:
+                await conn.execute('ALTER TABLE clans ADD COLUMN is_active BOOLEAN DEFAULT TRUE')
+                print("✅ Добавлена колонка is_active")
+            except Exception as e:
+                if 'already exists' in str(e).lower() or 'duplicate' in str(e).lower():
+                    print("ℹ️ Колонка is_active уже существует")
+                else:
+                    print(f"⚠️ Ошибка при добавлении is_active: {e}")
+            
+            # ✅ ОБНОВЛЯЕМ ДАННЫЕ КЛАНОВ
             for clan in CLANS_DATA:
                 await conn.execute('''
                     INSERT INTO clans (id, name, emoji, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, is_active)
@@ -192,6 +154,12 @@ async def init_db():
             # Добавляем колонку is_active если её нет
             try:
                 await db.execute('ALTER TABLE clans ADD COLUMN is_active INTEGER DEFAULT 1')
+            except:
+                pass
+            
+            # Добавляем колонку emoji если её нет
+            try:
+                await db.execute('ALTER TABLE clans ADD COLUMN emoji TEXT DEFAULT "🔵"')
             except:
                 pass
             
