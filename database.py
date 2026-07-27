@@ -51,7 +51,6 @@ async def init_db():
     if url:
         conn = await asyncpg.connect(url)
         try:
-            # Таблица clans с колонкой is_active
             await conn.execute('''
                 CREATE TABLE IF NOT EXISTS clans (
                     id INTEGER PRIMARY KEY,
@@ -107,9 +106,7 @@ async def init_db():
             
             # Добавляем колонку is_active если её нет
             try:
-                await conn.execute('''
-                    ALTER TABLE clans ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE
-                ''')
+                await conn.execute('ALTER TABLE clans ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE')
             except:
                 pass
             
@@ -198,7 +195,6 @@ async def init_db():
             except:
                 pass
             
-            # Вставляем или обновляем кланы
             for clan in CLANS_DATA:
                 await db.execute('''
                     INSERT OR IGNORE INTO clans (id, name, emoji, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, is_active)
@@ -279,16 +275,34 @@ async def get_clans_with_status():
     """Получить все кланы с их статусом активности"""
     url = get_database_url()
     if url:
-        conn = await asyncpg.connect(url)
         try:
-            rows = await conn.fetch('SELECT id, name, emoji, is_active FROM clans ORDER BY id')
-            return [(row['id'], row['name'], row['emoji'], row['is_active']) for row in rows]
-        finally:
-            await conn.close()
+            conn = await asyncpg.connect(url)
+            try:
+                rows = await conn.fetch('SELECT id, name, emoji, is_active FROM clans ORDER BY id')
+                return [(row['id'], row['name'], row['emoji'], row['is_active']) for row in rows]
+            finally:
+                await conn.close()
+        except Exception as e:
+            print(f"❌ Ошибка get_clans_with_status (PostgreSQL): {e}")
+            return [
+                (1, 'KAIF', '🔴', True),
+                (2, 'NA KAIFE', '🟡', True),
+                (3, 'KAIF METRO', '🟢', True),
+                (4, 'KAIF ESPORTS', '🟣', True),
+            ]
     else:
-        async with aiosqlite.connect(DB_PATH) as db:
-            cursor = await db.execute('SELECT id, name, emoji, is_active FROM clans ORDER BY id')
-            return await cursor.fetchall()
+        try:
+            async with aiosqlite.connect(DB_PATH) as db:
+                cursor = await db.execute('SELECT id, name, emoji, is_active FROM clans ORDER BY id')
+                return await cursor.fetchall()
+        except Exception as e:
+            print(f"❌ Ошибка get_clans_with_status (SQLite): {e}")
+            return [
+                (1, 'KAIF', '🔴', True),
+                (2, 'NA KAIFE', '🟡', True),
+                (3, 'KAIF METRO', '🟢', True),
+                (4, 'KAIF ESPORTS', '🟣', True),
+            ]
 
 
 # ============================================================
@@ -368,7 +382,6 @@ async def add_clan(name: str, emoji: str = '🔵', leader_id: int = None,
     if url:
         conn = await asyncpg.connect(url)
         try:
-            # Получаем максимальный ID для нового клана
             max_id = await conn.fetchval('SELECT COALESCE(MAX(id), 0) + 1 FROM clans')
             await conn.execute('''
                 INSERT INTO clans (id, name, emoji, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, is_active)
@@ -397,24 +410,14 @@ async def delete_clan(clan_id: int) -> bool:
     if url:
         conn = await asyncpg.connect(url)
         try:
-            # Проверяем, есть ли заявки в этом клане
-            count = await conn.fetchval('SELECT COUNT(*) FROM applications WHERE clan_id = $1', clan_id)
-            
-            # Удаляем заявки
             await conn.execute('DELETE FROM applications WHERE clan_id = $1', clan_id)
-            # Удаляем ссылки
             await conn.execute('DELETE FROM clan_links WHERE clan_id = $1', clan_id)
-            # Удаляем сам клан
-            result = await conn.execute('DELETE FROM clans WHERE id = $1', clan_id)
-            
+            await conn.execute('DELETE FROM clans WHERE id = $1', clan_id)
             return True
         finally:
             await conn.close()
     else:
         async with aiosqlite.connect(DB_PATH) as db:
-            cursor = await db.execute('SELECT COUNT(*) FROM applications WHERE clan_id = ?', (clan_id,))
-            count = (await cursor.fetchone())[0]
-            
             await db.execute('DELETE FROM applications WHERE clan_id = ?', (clan_id,))
             await db.execute('DELETE FROM clan_links WHERE clan_id = ?', (clan_id,))
             await db.execute('DELETE FROM clans WHERE id = ?', (clan_id,))
@@ -428,7 +431,6 @@ async def update_clan(clan_id: int, name: str = None, emoji: str = None,
     """Обновить данные клана"""
     url = get_database_url()
     
-    # Собираем поля для обновления
     updates = []
     params = []
     param_index = 1
@@ -480,7 +482,6 @@ async def update_clan(clan_id: int, name: str = None, emoji: str = None,
         finally:
             await conn.close()
     else:
-        # Для SQLite переделываем запрос
         placeholders = [f"{col.split(' ')[0]} = ?" for col in updates]
         sqlite_params = [p for p in params[:-1]] + [clan_id]
         query = f"UPDATE clans SET {', '.join(placeholders)} WHERE id = ?"
@@ -500,16 +501,12 @@ async def set_clan_active(clan_id: int, is_active: bool):
     if url:
         conn = await asyncpg.connect(url)
         try:
-            await conn.execute('''
-                UPDATE clans SET is_active = $1 WHERE id = $2
-            ''', is_active, clan_id)
+            await conn.execute('UPDATE clans SET is_active = $1 WHERE id = $2', is_active, clan_id)
         finally:
             await conn.close()
     else:
         async with aiosqlite.connect(DB_PATH) as db:
-            await db.execute('''
-                UPDATE clans SET is_active = ? WHERE id = ?
-            ''', (1 if is_active else 0, clan_id))
+            await db.execute('UPDATE clans SET is_active = ? WHERE id = ?', (1 if is_active else 0, clan_id))
             await db.commit()
 
 
