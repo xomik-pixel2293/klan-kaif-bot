@@ -270,7 +270,7 @@ async def receive_test_application(message: Message, state: FSMContext):
     await message.answer(
         '✅ Анкета сохранена!\n\n'
         'Теперь выберите клан для отправки тестовой заявки:',
-        reply_markup=clan_choice_for_test()
+        reply_markup=await clan_choice_for_test()
     )
 
 
@@ -282,6 +282,15 @@ async def test_select_clan(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
     clan_id = int(callback.data.split('_')[2])
+    
+    # ✅ ПРОВЕРЯЕМ, АКТИВЕН ЛИ КЛАН
+    is_active = await get_clan_active_status(clan_id)
+    if not is_active:
+        await callback.message.edit_text(
+            '❌ Этот клан временно не принимает заявки.\nВыберите другой клан.',
+            reply_markup=await clan_choice_for_test()
+        )
+        return
     
     # Получаем данные клана
     clan = await get_clan(clan_id)
@@ -761,10 +770,17 @@ async def noop(callback: CallbackQuery):
 async def apply_start(callback: CallbackQuery):
     await callback.answer()
     if await is_in_blacklist(callback.from_user.id):
-        await callback.message.edit_text('🚫 Вы в чёрном списке кланов KAIF.\nОбратитесь к лидерам для разблокировки.',
-                                         reply_markup=back_button('back_to_main'))
+        await callback.message.edit_text(
+            '🚫 Вы в чёрном списке кланов KAIF.\nОбратитесь к лидерам для разблокировки.',
+            reply_markup=back_button('back_to_main')
+        )
         return
-    await callback.message.edit_text('Выберите клан для подачи заявки:', reply_markup=clan_choice())
+    
+    # ✅ ИСПОЛЬЗУЕМ await clan_choice()
+    await callback.message.edit_text(
+        'Выберите клан для подачи заявки:',
+        reply_markup=await clan_choice()
+    )
 
 
 # ============================================================
@@ -780,17 +796,30 @@ async def select_clan(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer('❌ Клан не найден')
         return
 
+    # ✅ ПРОВЕРЯЕМ, АКТИВЕН ЛИ КЛАН
+    is_active = await get_clan_active_status(clan_id)
+    if not is_active:
+        await callback.message.edit_text(
+            '❌ Этот клан временно не принимает заявки.\nВыберите другой клан.',
+            reply_markup=await clan_choice()
+        )
+        return
+
     clan_id, name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, _ = clan
 
     if not leader_id and not deputy_id:
-        await callback.message.edit_text('❌ В этом клане пока нет ответственных.\nЗаявки временно не принимаются.',
-                                         reply_markup=back_button('back_to_main'))
+        await callback.message.edit_text(
+            '❌ В этом клане пока нет ответственных.\nЗаявки временно не принимаются.',
+            reply_markup=back_button('back_to_main')
+        )
         return
 
     existing = await get_pending_application(callback.from_user.id, clan_id)
     if existing:
-        await callback.message.edit_text('⏳ У вас уже есть заявка в этот клан!\nДождитесь решения.',
-                                         reply_markup=after_apply_buttons())
+        await callback.message.edit_text(
+            '⏳ У вас уже есть заявка в этот клан!\nДождитесь решения.',
+            reply_markup=after_apply_buttons()
+        )
         return
 
     await state.update_data(clan_id=clan_id, clan_name=name)
@@ -808,10 +837,10 @@ async def select_clan(callback: CallbackQuery, state: FSMContext):
     )
 
     photo_text = (
-    '📸 Теперь отправьте 2 фото:\n'
-    '1️⃣ Скрин за ТЕКУЩИЙ сезон\n'
-    '2️⃣ Скрин за ПРОШЛЫЙ сезон (если есть)'
-)
+        '📸 Теперь отправьте 2 фото:\n'
+        '1️⃣ Скрин за ТЕКУЩИЙ сезон\n'
+        '2️⃣ Скрин за ПРОШЛЫЙ сезон (если есть)'
+    )
 
     await callback.message.edit_text(
         f'{hint}'
@@ -1951,6 +1980,7 @@ async def admin_export(callback: CallbackQuery):
                 all_leaders[deputy_id] = deputy_username or str(deputy_id)
 
         for app in apps:
+            # ✅ ПРАВИЛЬНАЯ РАСПАКОВКА (12 полей)
             (app_id, user_id, username, clan_name, answers_json,
              photo_old, photo_new, has_photos, status,
              created_at, reviewed_by, reviewed_at) = app
@@ -1986,7 +2016,7 @@ async def admin_export(callback: CallbackQuery):
                 # Сначала ищем среди руководителей кланов
                 reviewer_username = all_leaders.get(reviewed_by, '')
                 if not reviewer_username:
-                    # Если не нашли — пробуем найти в заявках (на случай если одобрил админ)
+                    # Если не нашли — пробуем найти в заявках
                     try:
                         async with aiosqlite.connect(DB_PATH) as db:
                             async with db.execute(
