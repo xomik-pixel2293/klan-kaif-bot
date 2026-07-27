@@ -78,12 +78,18 @@ def back_button(callback_data='back_to_main'):
     ])
 
 
+# ============================================================
+# 👑 АДМИН-ПАНЕЛЬ
+# ============================================================
+
 def admin_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='📊 Статистика', callback_data='admin_stats')],
         [InlineKeyboardButton(text='📤 Экспорт CSV', callback_data='admin_export')],
         [InlineKeyboardButton(text='👥 Чёрный список', callback_data='admin_blacklist')],
         [InlineKeyboardButton(text='👥 Управление руководителями', callback_data='admin_manage_roles')],
+        [InlineKeyboardButton(text='🔄 Вкл/Выкл кланы', callback_data='admin_clan_status')],
+        [InlineKeyboardButton(text='🏗️ Управление кланами', callback_data='admin_clan_management')],
         [InlineKeyboardButton(text='🧪 Тестовая анкета', callback_data='admin_test_application')],
         [InlineKeyboardButton(text='🗑 Очистить тестовые заявки', callback_data='admin_clear_test')],
         [InlineKeyboardButton(text='🧑‍💻 Стать кандидатом', callback_data='admin_become_candidate')],
@@ -182,6 +188,10 @@ def contact_with_link(app_id, link):
     ])
 
 
+# ============================================================
+# 🧪 ТЕСТОВАЯ АНКЕТА
+# ============================================================
+
 def test_application_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='✏️ Написать тестовую анкету', callback_data='write_test_application')],
@@ -196,4 +206,48 @@ def clan_choice_for_test():
         [InlineKeyboardButton(text='🟢 KAIF METRO', callback_data='test_clan_3')],
         [InlineKeyboardButton(text='🟣 KAIF ESPORTS', callback_data='test_clan_4')],
         [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_test')],
+    ])
+
+
+# ============================================================
+# 🔄 УПРАВЛЕНИЕ СТАТУСОМ КЛАНОВ (АДМИН)
+# ============================================================
+
+def admin_clan_status_menu():
+    """Меню управления статусами кланов"""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='🔴 KAIF', callback_data='admin_clan_status_1')],
+        [InlineKeyboardButton(text='🟡 NA KAIFE', callback_data='admin_clan_status_2')],
+        [InlineKeyboardButton(text='🟢 KAIF METRO', callback_data='admin_clan_status_3')],
+        [InlineKeyboardButton(text='🟣 KAIF ESPORTS', callback_data='admin_clan_status_4')],
+        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')],
+    ])
+
+
+def clan_toggle_button(clan_id: int, clan_name: str, is_active: bool):
+    """Кнопка включения/выключения клана"""
+    status_text = "✅ ВКЛЮЧЁН" if is_active else "❌ ВЫКЛЮЧЁН"
+    emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣'}
+    emoji = emojis.get(clan_id, '🔵')
+    button_text = f"{emoji} {clan_name}: {status_text}"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text=f"🔄 {button_text}",
+            callback_data=f'toggle_clan_{clan_id}'
+        )],
+        [InlineKeyboardButton(text='🔙 Назад', callback_data='admin_clan_status')],
+    ])
+
+
+# ============================================================
+# 🏗️ УПРАВЛЕНИЕ КЛАНАМИ (ДОБАВЛЕНИЕ/УДАЛЕНИЕ/РЕДАКТИРОВАНИЕ)
+# ============================================================
+
+def admin_clan_management_menu():
+    """Меню управления кланами"""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='➕ Добавить клан', callback_data='admin_add_clan')],
+        [InlineKeyboardButton(text='🗑 Удалить клан', callback_data='admin_delete_clan')],
+        [InlineKeyboardButton(text='✏️ Редактировать клан', callback_data='admin_edit_clan')],
+        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')],
     ])
