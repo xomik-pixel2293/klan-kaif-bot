@@ -1,4 +1,5 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from database import get_clans_with_status  # 🔥 НУЖНО ДОБАВИТЬ ИМПОРТ
 
 
 # ============================================================
@@ -21,14 +22,28 @@ def leader_menu():
     ])
 
 
-def clan_choice():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='🔴 KAIF', callback_data='clan_1')],
-        [InlineKeyboardButton(text='🟡 NA KAIFE', callback_data='clan_2')],
-        [InlineKeyboardButton(text='🟢 KAIF METRO', callback_data='clan_3')],
-        [InlineKeyboardButton(text='🟣 KAIF ESPORTS', callback_data='clan_4')],
-        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_main')],
-    ])
+async def clan_choice():
+    """Клавиатура выбора клана (только активные)"""
+    clans = await get_clans_with_status()
+    buttons = []
+    emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣'}
+    
+    for clan_id, name, emoji, is_active in clans:
+        if is_active:
+            emoji = emojis.get(clan_id, '🔵')
+            buttons.append([InlineKeyboardButton(
+                text=f'{emoji} {name}',
+                callback_data=f'clan_{clan_id}'
+            )])
+    
+    if not buttons:
+        buttons.append([InlineKeyboardButton(
+            text='❌ Нет доступных кланов',
+            callback_data='noop'
+        )])
+    
+    buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_main')])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 def review_buttons(app_id):
@@ -199,14 +214,28 @@ def test_application_menu():
     ])
 
 
-def clan_choice_for_test():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='🔴 KAIF', callback_data='test_clan_1')],
-        [InlineKeyboardButton(text='🟡 NA KAIFE', callback_data='test_clan_2')],
-        [InlineKeyboardButton(text='🟢 KAIF METRO', callback_data='test_clan_3')],
-        [InlineKeyboardButton(text='🟣 KAIF ESPORTS', callback_data='test_clan_4')],
-        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_test')],
-    ])
+async def clan_choice_for_test():
+    """Клавиатура выбора клана для тестовой анкеты (только активные)"""
+    clans = await get_clans_with_status()
+    buttons = []
+    emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣'}
+    
+    for clan_id, name, emoji, is_active in clans:
+        if is_active:
+            emoji = emojis.get(clan_id, '🔵')
+            buttons.append([InlineKeyboardButton(
+                text=f'{emoji} {name}',
+                callback_data=f'test_clan_{clan_id}'
+            )])
+    
+    if not buttons:
+        buttons.append([InlineKeyboardButton(
+            text='❌ Нет доступных кланов',
+            callback_data='noop'
+        )])
+    
+    buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_test')])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 # ============================================================
@@ -214,7 +243,6 @@ def clan_choice_for_test():
 # ============================================================
 
 def admin_clan_status_menu():
-    """Меню управления статусами кланов"""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='🔴 KAIF', callback_data='admin_clan_status_1')],
         [InlineKeyboardButton(text='🟡 NA KAIFE', callback_data='admin_clan_status_2')],
@@ -225,14 +253,13 @@ def admin_clan_status_menu():
 
 
 def clan_toggle_button(clan_id: int, clan_name: str, is_active: bool):
-    """Кнопка включения/выключения клана"""
-    status_text = "✅ ВКЛЮЧЁН" if is_active else "❌ ВЫКЛЮЧЁН"
     emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣'}
     emoji = emojis.get(clan_id, '🔵')
-    button_text = f"{emoji} {clan_name}: {status_text}"
+    status_text = "✅ ВКЛЮЧЁН" if is_active else "❌ ВЫКЛЮЧЁН"
+    
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
-            text=f"🔄 {button_text}",
+            text=f"🔄 {emoji} {clan_name}: {status_text}",
             callback_data=f'toggle_clan_{clan_id}'
         )],
         [InlineKeyboardButton(text='🔙 Назад', callback_data='admin_clan_status')],
@@ -244,7 +271,6 @@ def clan_toggle_button(clan_id: int, clan_name: str, is_active: bool):
 # ============================================================
 
 def admin_clan_management_menu():
-    """Меню управления кланами"""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='➕ Добавить клан', callback_data='admin_add_clan')],
         [InlineKeyboardButton(text='🗑 Удалить клан', callback_data='admin_delete_clan')],
