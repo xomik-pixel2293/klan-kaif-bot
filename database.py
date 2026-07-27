@@ -11,13 +11,13 @@ DB_PATH = 'klan_kaif.db'
 # ============================================================
 
 CLANS_DATA = [
-    {'id': 1, 'name': 'KAIF', 'leader_id': 8029326399, 'leader_username': 'KAIFLfrik', 'leader_name': 'Лёша',
+    {'id': 1, 'name': 'KAIF', 'emoji': '🔴', 'leader_id': 8029326399, 'leader_username': 'KAIFLfrik', 'leader_name': 'Лёша',
      'deputy_id': None, 'deputy_username': None, 'deputy_name': None},
-    {'id': 2, 'name': 'NA KAIFE', 'leader_id': 7271067034, 'leader_username': 'Vibnot', 'leader_name': 'Катя',
+    {'id': 2, 'name': 'NA KAIFE', 'emoji': '🟡', 'leader_id': 7271067034, 'leader_username': 'Vibnot', 'leader_name': 'Катя',
      'deputy_id': 884404620, 'deputy_username': 'KAIFBOOK', 'deputy_name': 'Игорь'},
-    {'id': 3, 'name': 'KAIF METRO', 'leader_id': 5590623366, 'leader_username': 'gold_Histori', 'leader_name': 'София',
+    {'id': 3, 'name': 'KAIF METRO', 'emoji': '🟢', 'leader_id': 5590623366, 'leader_username': 'gold_Histori', 'leader_name': 'София',
      'deputy_id': 1622791763, 'deputy_username': 'Xoma9991', 'deputy_name': 'Xoma'},
-    {'id': 4, 'name': 'KAIF ESPORTS', 'leader_id': 643813214, 'leader_username': 'vi_sergeeevna',
+    {'id': 4, 'name': 'KAIF ESPORTS', 'emoji': '🟣', 'leader_id': 643813214, 'leader_username': 'vi_sergeeevna',
      'leader_name': 'Виктория', 'deputy_id': 5346986362, 'deputy_username': 'DiamirManager', 'deputy_name': 'Саид'},
 ]
 
@@ -51,16 +51,19 @@ async def init_db():
     if url:
         conn = await asyncpg.connect(url)
         try:
+            # Таблица clans с колонкой is_active
             await conn.execute('''
                 CREATE TABLE IF NOT EXISTS clans (
                     id INTEGER PRIMARY KEY,
                     name TEXT UNIQUE NOT NULL,
+                    emoji TEXT,
                     leader_id BIGINT,
                     leader_username TEXT,
                     leader_name TEXT,
                     deputy_id BIGINT,
                     deputy_username TEXT,
                     deputy_name TEXT,
+                    is_active BOOLEAN DEFAULT TRUE,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
@@ -102,12 +105,31 @@ async def init_db():
                 )
             ''')
             
+            # Добавляем колонку is_active если её нет
+            try:
+                await conn.execute('''
+                    ALTER TABLE clans ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE
+                ''')
+            except:
+                pass
+            
+            # Вставляем или обновляем кланы
             for clan in CLANS_DATA:
                 await conn.execute('''
-                    INSERT INTO clans (id, name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-                    ON CONFLICT (id) DO NOTHING
-                ''', clan['id'], clan['name'], clan['leader_id'], clan['leader_username'], clan['leader_name'],
+                    INSERT INTO clans (id, name, emoji, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, is_active)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE)
+                    ON CONFLICT (id) DO UPDATE SET
+                        name = EXCLUDED.name,
+                        emoji = EXCLUDED.emoji,
+                        leader_id = EXCLUDED.leader_id,
+                        leader_username = EXCLUDED.leader_username,
+                        leader_name = EXCLUDED.leader_name,
+                        deputy_id = EXCLUDED.deputy_id,
+                        deputy_username = EXCLUDED.deputy_username,
+                        deputy_name = EXCLUDED.deputy_name,
+                        is_active = EXCLUDED.is_active
+                ''', clan['id'], clan['name'], clan.get('emoji', '🔵'), 
+                    clan['leader_id'], clan['leader_username'], clan['leader_name'],
                     clan['deputy_id'], clan['deputy_username'], clan['deputy_name'])
             
             print("✅ Supabase подключена и инициализирована!")
@@ -121,12 +143,14 @@ async def init_db():
                 CREATE TABLE IF NOT EXISTS clans (
                     id INTEGER PRIMARY KEY,
                     name TEXT UNIQUE NOT NULL,
+                    emoji TEXT,
                     leader_id INTEGER,
                     leader_username TEXT,
                     leader_name TEXT,
                     deputy_id INTEGER,
                     deputy_username TEXT,
                     deputy_name TEXT,
+                    is_active INTEGER DEFAULT 1,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
@@ -168,11 +192,19 @@ async def init_db():
                 )
             ''')
             
+            # Добавляем колонку is_active если её нет
+            try:
+                await db.execute('ALTER TABLE clans ADD COLUMN is_active INTEGER DEFAULT 1')
+            except:
+                pass
+            
+            # Вставляем или обновляем кланы
             for clan in CLANS_DATA:
                 await db.execute('''
-                    INSERT OR IGNORE INTO clans (id, name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (clan['id'], clan['name'], clan['leader_id'], clan['leader_username'], clan['leader_name'],
+                    INSERT OR IGNORE INTO clans (id, name, emoji, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, is_active)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                ''', (clan['id'], clan['name'], clan.get('emoji', '🔵'), 
+                      clan['leader_id'], clan['leader_username'], clan['leader_name'],
                       clan['deputy_id'], clan['deputy_username'], clan['deputy_name']))
             
             await db.commit()
@@ -243,6 +275,22 @@ async def get_clan_by_user(user_id):
             return await cursor.fetchone()
 
 
+async def get_clans_with_status():
+    """Получить все кланы с их статусом активности"""
+    url = get_database_url()
+    if url:
+        conn = await asyncpg.connect(url)
+        try:
+            rows = await conn.fetch('SELECT id, name, emoji, is_active FROM clans ORDER BY id')
+            return [(row['id'], row['name'], row['emoji'], row['is_active']) for row in rows]
+        finally:
+            await conn.close()
+    else:
+        async with aiosqlite.connect(DB_PATH) as db:
+            cursor = await db.execute('SELECT id, name, emoji, is_active FROM clans ORDER BY id')
+            return await cursor.fetchall()
+
+
 # ============================================================
 # 👥 ФУНКЦИИ УПРАВЛЕНИЯ РУКОВОДИТЕЛЯМИ
 # ============================================================
@@ -305,6 +353,181 @@ async def remove_clan_deputy(clan_id):
         async with aiosqlite.connect(DB_PATH) as db:
             await db.execute('UPDATE clans SET deputy_id = NULL, deputy_username = NULL, deputy_name = NULL WHERE id = ?', (clan_id,))
             await db.commit()
+
+
+# ============================================================
+# 🏗️ ДОБАВЛЕНИЕ И УДАЛЕНИЕ КЛАНОВ
+# ============================================================
+
+async def add_clan(name: str, emoji: str = '🔵', leader_id: int = None, 
+                   leader_username: str = None, leader_name: str = None,
+                   deputy_id: int = None, deputy_username: str = None, 
+                   deputy_name: str = None) -> int:
+    """Добавить новый клан"""
+    url = get_database_url()
+    if url:
+        conn = await asyncpg.connect(url)
+        try:
+            # Получаем максимальный ID для нового клана
+            max_id = await conn.fetchval('SELECT COALESCE(MAX(id), 0) + 1 FROM clans')
+            await conn.execute('''
+                INSERT INTO clans (id, name, emoji, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, is_active)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE)
+            ''', max_id, name, emoji, leader_id, leader_username, leader_name,
+                deputy_id, deputy_username, deputy_name)
+            return max_id
+        finally:
+            await conn.close()
+    else:
+        async with aiosqlite.connect(DB_PATH) as db:
+            cursor = await db.execute('SELECT COALESCE(MAX(id), 0) + 1 FROM clans')
+            max_id = (await cursor.fetchone())[0]
+            await db.execute('''
+                INSERT INTO clans (id, name, emoji, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+            ''', (max_id, name, emoji, leader_id, leader_username, leader_name,
+                  deputy_id, deputy_username, deputy_name))
+            await db.commit()
+            return max_id
+
+
+async def delete_clan(clan_id: int) -> bool:
+    """Удалить клан (и все связанные заявки и ссылки)"""
+    url = get_database_url()
+    if url:
+        conn = await asyncpg.connect(url)
+        try:
+            # Проверяем, есть ли заявки в этом клане
+            count = await conn.fetchval('SELECT COUNT(*) FROM applications WHERE clan_id = $1', clan_id)
+            
+            # Удаляем заявки
+            await conn.execute('DELETE FROM applications WHERE clan_id = $1', clan_id)
+            # Удаляем ссылки
+            await conn.execute('DELETE FROM clan_links WHERE clan_id = $1', clan_id)
+            # Удаляем сам клан
+            result = await conn.execute('DELETE FROM clans WHERE id = $1', clan_id)
+            
+            return True
+        finally:
+            await conn.close()
+    else:
+        async with aiosqlite.connect(DB_PATH) as db:
+            cursor = await db.execute('SELECT COUNT(*) FROM applications WHERE clan_id = ?', (clan_id,))
+            count = (await cursor.fetchone())[0]
+            
+            await db.execute('DELETE FROM applications WHERE clan_id = ?', (clan_id,))
+            await db.execute('DELETE FROM clan_links WHERE clan_id = ?', (clan_id,))
+            await db.execute('DELETE FROM clans WHERE id = ?', (clan_id,))
+            await db.commit()
+            return True
+
+
+async def update_clan(clan_id: int, name: str = None, emoji: str = None,
+                      leader_id: int = None, leader_username: str = None, leader_name: str = None,
+                      deputy_id: int = None, deputy_username: str = None, deputy_name: str = None):
+    """Обновить данные клана"""
+    url = get_database_url()
+    
+    # Собираем поля для обновления
+    updates = []
+    params = []
+    param_index = 1
+    
+    if name is not None:
+        updates.append(f"name = ${param_index}")
+        params.append(name)
+        param_index += 1
+    if emoji is not None:
+        updates.append(f"emoji = ${param_index}")
+        params.append(emoji)
+        param_index += 1
+    if leader_id is not None:
+        updates.append(f"leader_id = ${param_index}")
+        params.append(leader_id)
+        param_index += 1
+    if leader_username is not None:
+        updates.append(f"leader_username = ${param_index}")
+        params.append(leader_username)
+        param_index += 1
+    if leader_name is not None:
+        updates.append(f"leader_name = ${param_index}")
+        params.append(leader_name)
+        param_index += 1
+    if deputy_id is not None:
+        updates.append(f"deputy_id = ${param_index}")
+        params.append(deputy_id)
+        param_index += 1
+    if deputy_username is not None:
+        updates.append(f"deputy_username = ${param_index}")
+        params.append(deputy_username)
+        param_index += 1
+    if deputy_name is not None:
+        updates.append(f"deputy_name = ${param_index}")
+        params.append(deputy_name)
+        param_index += 1
+    
+    if not updates:
+        return False
+    
+    params.append(clan_id)
+    query = f"UPDATE clans SET {', '.join(updates)} WHERE id = ${param_index}"
+    
+    if url:
+        conn = await asyncpg.connect(url)
+        try:
+            await conn.execute(query, *params)
+            return True
+        finally:
+            await conn.close()
+    else:
+        # Для SQLite переделываем запрос
+        placeholders = [f"{col.split(' ')[0]} = ?" for col in updates]
+        sqlite_params = [p for p in params[:-1]] + [clan_id]
+        query = f"UPDATE clans SET {', '.join(placeholders)} WHERE id = ?"
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute(query, sqlite_params)
+            await db.commit()
+            return True
+
+
+# ============================================================
+# 🔄 УПРАВЛЕНИЕ СТАТУСОМ КЛАНОВ (ВКЛ/ВЫКЛ)
+# ============================================================
+
+async def set_clan_active(clan_id: int, is_active: bool):
+    """Включить/выключить приём заявок в клан"""
+    url = get_database_url()
+    if url:
+        conn = await asyncpg.connect(url)
+        try:
+            await conn.execute('''
+                UPDATE clans SET is_active = $1 WHERE id = $2
+            ''', is_active, clan_id)
+        finally:
+            await conn.close()
+    else:
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute('''
+                UPDATE clans SET is_active = ? WHERE id = ?
+            ''', (1 if is_active else 0, clan_id))
+            await db.commit()
+
+
+async def get_clan_active_status(clan_id: int) -> bool:
+    """Получить статус активности клана (True — включён)"""
+    url = get_database_url()
+    if url:
+        conn = await asyncpg.connect(url)
+        try:
+            row = await conn.fetchrow('SELECT is_active FROM clans WHERE id = $1', clan_id)
+            return row['is_active'] if row else True
+        finally:
+            await conn.close()
+    else:
+        async with aiosqlite.connect(DB_PATH) as db:
+            cursor = await db.execute('SELECT is_active FROM clans WHERE id = ?', (clan_id,))
+            row = await cursor.fetchone()
+            return bool(row[0]) if row else True
 
 
 # ============================================================
