@@ -150,7 +150,7 @@ async def back_to_clan_management(callback: CallbackQuery, state: FSMContext):
 
 
 # ============================================================
-# 🧪 ТЕСТОВАЯ АНКЕТА (ДЛЯ АДМИНОВ) - СТАРАЯ ВЕРСИЯ
+# 🧪 ТЕСТОВАЯ АНКЕТА (ДЛЯ АДМИНОВ)
 # ============================================================
 
 @router.callback_query(F.data == 'admin_test_application')
@@ -284,7 +284,12 @@ async def test_select_clan(callback: CallbackQuery, state: FSMContext):
     clan_id = int(callback.data.split('_')[2])
     
     # ✅ ПРОВЕРЯЕМ, АКТИВЕН ЛИ КЛАН
-    is_active = await get_clan_active_status(clan_id)
+    try:
+        is_active = await get_clan_active_status(clan_id)
+    except Exception as e:
+        print(f"❌ Ошибка get_clan_active_status: {e}")
+        is_active = True
+    
     if not is_active:
         await callback.message.edit_text(
             '❌ Этот клан временно не принимает заявки.\nВыберите другой клан.',
@@ -297,6 +302,29 @@ async def test_select_clan(callback: CallbackQuery, state: FSMContext):
     if not clan:
         await callback.message.answer('❌ Клан не найден')
         return
+
+    # ✅ ПРАВИЛЬНАЯ РАСПАКОВКА (с учётом emoji и is_active)
+    # clan: (id, name, emoji, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, is_active, created_at)
+    if len(clan) >= 9:
+        clan_id = clan[0]
+        name = clan[1]
+        # emoji = clan[2]  # не используем здесь
+        leader_id = clan[3]
+        leader_username = clan[4]
+        leader_name = clan[5]
+        deputy_id = clan[6]
+        deputy_username = clan[7]
+        deputy_name = clan[8]
+    else:
+        # Запасной вариант если полей меньше
+        clan_id = clan[0]
+        name = clan[1]
+        leader_id = clan[2] if len(clan) > 2 else None
+        leader_username = clan[3] if len(clan) > 3 else None
+        leader_name = clan[4] if len(clan) > 4 else None
+        deputy_id = clan[5] if len(clan) > 5 else None
+        deputy_username = clan[6] if len(clan) > 6 else None
+        deputy_name = clan[7] if len(clan) > 7 else None
 
     data = await state.get_data()
     answers = data.get('test_answers', {})
@@ -311,8 +339,6 @@ async def test_select_clan(callback: CallbackQuery, state: FSMContext):
         clan_id,
         answers
     )
-
-    clan_id, name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, _ = clan
 
     text = (
         f'🧪 ТЕСТОВАЯ ЗАЯВКА #{app_id} В КЛАН {name}\n\n'
@@ -503,7 +529,28 @@ async def skip_photo(callback: CallbackQuery, state: FSMContext):
             await callback.message.answer('❌ Клан не найден.')
             return
 
-        clan_id, name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, _ = clan
+        # ✅ ПРАВИЛЬНАЯ РАСПАКОВКА (с учётом emoji и is_active)
+        # clan: (id, name, emoji, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, is_active, created_at)
+        if len(clan) >= 9:
+            clan_id = clan[0]
+            name = clan[1]
+            # emoji = clan[2]  # не используем здесь
+            leader_id = clan[3]
+            leader_username = clan[4]
+            leader_name = clan[5]
+            deputy_id = clan[6]
+            deputy_username = clan[7]
+            deputy_name = clan[8]
+        else:
+            # Запасной вариант если полей меньше
+            clan_id = clan[0]
+            name = clan[1]
+            leader_id = clan[2] if len(clan) > 2 else None
+            leader_username = clan[3] if len(clan) > 3 else None
+            leader_name = clan[4] if len(clan) > 4 else None
+            deputy_id = clan[5] if len(clan) > 5 else None
+            deputy_username = clan[6] if len(clan) > 6 else None
+            deputy_name = clan[7] if len(clan) > 7 else None
 
         text = (
             f'🔔 НОВАЯ ЗАЯВКА #{app_id} В КЛАН {clan_name}\n\n'
@@ -811,16 +858,42 @@ async def select_clan(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer('❌ Клан не найден')
         return
 
+    # ✅ ПРАВИЛЬНАЯ РАСПАКОВКА (с учётом emoji и is_active)
+    # clan: (id, name, emoji, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, is_active, created_at)
+    if len(clan) >= 9:
+        clan_id = clan[0]
+        name = clan[1]
+        # emoji = clan[2]  # не используем здесь
+        leader_id = clan[3]
+        leader_username = clan[4]
+        leader_name = clan[5]
+        deputy_id = clan[6]
+        deputy_username = clan[7]
+        deputy_name = clan[8]
+    else:
+        # Запасной вариант если полей меньше
+        clan_id = clan[0]
+        name = clan[1]
+        leader_id = clan[2] if len(clan) > 2 else None
+        leader_username = clan[3] if len(clan) > 3 else None
+        leader_name = clan[4] if len(clan) > 4 else None
+        deputy_id = clan[5] if len(clan) > 5 else None
+        deputy_username = clan[6] if len(clan) > 6 else None
+        deputy_name = clan[7] if len(clan) > 7 else None
+
     # ✅ ПРОВЕРЯЕМ, АКТИВЕН ЛИ КЛАН
-    is_active = await get_clan_active_status(clan_id)
+    try:
+        is_active = await get_clan_active_status(clan_id)
+    except Exception as e:
+        print(f"❌ Ошибка get_clan_active_status: {e}")
+        is_active = True
+    
     if not is_active:
         await callback.message.edit_text(
             '❌ Этот клан временно не принимает заявки.\nВыберите другой клан.',
             reply_markup=await clan_choice()
         )
         return
-
-    clan_id, name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, _ = clan
 
     if not leader_id and not deputy_id:
         await callback.message.edit_text(
@@ -1090,7 +1163,28 @@ async def receive_photo_new(message: Message, state: FSMContext):
             await message.answer('❌ Клан не найден.')
             return
 
-        clan_id, name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, _ = clan
+        # ✅ ПРАВИЛЬНАЯ РАСПАКОВКА (с учётом emoji и is_active)
+        # clan: (id, name, emoji, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, is_active, created_at)
+        if len(clan) >= 9:
+            clan_id = clan[0]
+            name = clan[1]
+            # emoji = clan[2]  # не используем здесь
+            leader_id = clan[3]
+            leader_username = clan[4]
+            leader_name = clan[5]
+            deputy_id = clan[6]
+            deputy_username = clan[7]
+            deputy_name = clan[8]
+        else:
+            # Запасной вариант если полей меньше
+            clan_id = clan[0]
+            name = clan[1]
+            leader_id = clan[2] if len(clan) > 2 else None
+            leader_username = clan[3] if len(clan) > 3 else None
+            leader_name = clan[4] if len(clan) > 4 else None
+            deputy_id = clan[5] if len(clan) > 5 else None
+            deputy_username = clan[6] if len(clan) > 6 else None
+            deputy_name = clan[7] if len(clan) > 7 else None
 
         text = (
             f'🔔 НОВАЯ ЗАЯВКА #{app_id} В КЛАН {clan_name}\n\n'
@@ -1223,8 +1317,28 @@ async def send_link(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer('❌ Заявка не найдена')
         return
     
-    # Распаковываем данные клана
-    clan_id, clan_name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, _ = clan
+    # ✅ ПРАВИЛЬНАЯ РАСПАКОВКА (с учётом emoji и is_active)
+    # clan: (id, name, emoji, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, is_active, created_at)
+    if len(clan) >= 9:
+        clan_id = clan[0]
+        clan_name = clan[1]
+        # emoji = clan[2]  # не используем здесь
+        leader_id = clan[3]
+        leader_username = clan[4]
+        leader_name = clan[5]
+        deputy_id = clan[6]
+        deputy_username = clan[7]
+        deputy_name = clan[8]
+    else:
+        # Запасной вариант если полей меньше
+        clan_id = clan[0]
+        clan_name = clan[1]
+        leader_id = clan[2] if len(clan) > 2 else None
+        leader_username = clan[3] if len(clan) > 3 else None
+        leader_name = clan[4] if len(clan) > 4 else None
+        deputy_id = clan[5] if len(clan) > 5 else None
+        deputy_username = clan[6] if len(clan) > 6 else None
+        deputy_name = clan[7] if len(clan) > 7 else None
     
     # Получаем ссылку на чат
     link = await get_clan_link(clan_id)
@@ -1275,7 +1389,6 @@ async def send_link(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer(f'❌ Не удалось отправить сообщение. Ошибка: {e}')
     
     await state.clear()
-
 
 # ============================================================
 # ✏️ НАПИСАТЬ СООБЩЕНИЕ (ДЛЯ ЛИДЕРОВ/ЗАМОВ)
@@ -1432,7 +1545,29 @@ async def send_message(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer('❌ Заявка не найдена')
         return
 
-    clan_id, clan_name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, _ = clan
+    # ✅ ПРАВИЛЬНАЯ РАСПАКОВКА (с учётом emoji и is_active)
+    # clan: (id, name, emoji, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, is_active, created_at)
+    if len(clan) >= 9:
+        clan_id = clan[0]
+        clan_name = clan[1]
+        # emoji = clan[2]  # не используем здесь
+        leader_id = clan[3]
+        leader_username = clan[4]
+        leader_name = clan[5]
+        deputy_id = clan[6]
+        deputy_username = clan[7]
+        deputy_name = clan[8]
+    else:
+        # Запасной вариант если полей меньше
+        clan_id = clan[0]
+        clan_name = clan[1]
+        leader_id = clan[2] if len(clan) > 2 else None
+        leader_username = clan[3] if len(clan) > 3 else None
+        leader_name = clan[4] if len(clan) > 4 else None
+        deputy_id = clan[5] if len(clan) > 5 else None
+        deputy_username = clan[6] if len(clan) > 6 else None
+        deputy_name = clan[7] if len(clan) > 7 else None
+    
     link = await get_clan_link(clan_id)
 
     if not link:
@@ -1477,7 +1612,6 @@ async def send_message(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer(f'❌ Не удалось отправить сообщение. Ошибка: {e}')
 
     await state.clear()
-
 
 # ============================================================
 # 📊 МОИ ЗАЯВКИ
