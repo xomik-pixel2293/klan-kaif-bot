@@ -257,6 +257,7 @@ async def get_clan_by_name(name):
 
 
 async def get_clan_by_user(user_id):
+    """Получить клан, где пользователь является лидером или замом"""
     url = get_database_url()
     if url:
         conn = await asyncpg.connect(url)
@@ -271,6 +272,10 @@ async def get_clan_by_user(user_id):
             return await cursor.fetchone()
 
 
+# ============================================================
+# 🔄 СТАТУСЫ КЛАНОВ (ВКЛ/ВЫКЛ)
+# ============================================================
+
 async def get_clans_with_status():
     """Получить все кланы с их статусом активности"""
     url = get_database_url()
@@ -283,7 +288,7 @@ async def get_clans_with_status():
             finally:
                 await conn.close()
         except Exception as e:
-            print(f"❌ Ошибка get_clans_with_status (PostgreSQL): {e}")
+            print(f"❌ Ошибка get_clans_with_status: {e}")
             return [
                 (1, 'KAIF', '🔴', True),
                 (2, 'NA KAIFE', '🟡', True),
@@ -294,15 +299,58 @@ async def get_clans_with_status():
         try:
             async with aiosqlite.connect(DB_PATH) as db:
                 cursor = await db.execute('SELECT id, name, emoji, is_active FROM clans ORDER BY id')
-                return await cursor.fetchall()
+                rows = await cursor.fetchall()
+                return [(row[0], row[1], row[2], bool(row[3])) for row in rows]
         except Exception as e:
-            print(f"❌ Ошибка get_clans_with_status (SQLite): {e}")
+            print(f"❌ Ошибка get_clans_with_status: {e}")
             return [
                 (1, 'KAIF', '🔴', True),
                 (2, 'NA KAIFE', '🟡', True),
                 (3, 'KAIF METRO', '🟢', True),
                 (4, 'KAIF ESPORTS', '🟣', True),
             ]
+
+
+async def set_clan_active(clan_id: int, is_active: bool):
+    """Включить/выключить приём заявок в клан"""
+    url = get_database_url()
+    if url:
+        conn = await asyncpg.connect(url)
+        try:
+            await conn.execute(
+                'UPDATE clans SET is_active = $1 WHERE id = $2',
+                is_active, clan_id
+            )
+            print(f"✅ Статус клана {clan_id} изменён на {is_active}")
+        except Exception as e:
+            print(f"❌ Ошибка при обновлении статуса: {e}")
+        finally:
+            await conn.close()
+    else:
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute(
+                'UPDATE clans SET is_active = ? WHERE id = ?',
+                (1 if is_active else 0, clan_id)
+            )
+            await db.commit()
+            print(f"✅ Статус клана {clan_id} изменён на {is_active}")
+
+
+async def get_clan_active_status(clan_id: int) -> bool:
+    """Получить статус активности клана (True — включён)"""
+    url = get_database_url()
+    if url:
+        conn = await asyncpg.connect(url)
+        try:
+            row = await conn.fetchrow('SELECT is_active FROM clans WHERE id = $1', clan_id)
+            return row['is_active'] if row else True
+        finally:
+            await conn.close()
+    else:
+        async with aiosqlite.connect(DB_PATH) as db:
+            cursor = await db.execute('SELECT is_active FROM clans WHERE id = ?', (clan_id,))
+            row = await cursor.fetchone()
+            return bool(row[0]) if row else True
 
 
 # ============================================================
@@ -489,42 +537,6 @@ async def update_clan(clan_id: int, name: str = None, emoji: str = None,
             await db.execute(query, sqlite_params)
             await db.commit()
             return True
-
-
-# ============================================================
-# 🔄 УПРАВЛЕНИЕ СТАТУСОМ КЛАНОВ (ВКЛ/ВЫКЛ)
-# ============================================================
-
-async def set_clan_active(clan_id: int, is_active: bool):
-    """Включить/выключить приём заявок в клан"""
-    url = get_database_url()
-    if url:
-        conn = await asyncpg.connect(url)
-        try:
-            await conn.execute('UPDATE clans SET is_active = $1 WHERE id = $2', is_active, clan_id)
-        finally:
-            await conn.close()
-    else:
-        async with aiosqlite.connect(DB_PATH) as db:
-            await db.execute('UPDATE clans SET is_active = ? WHERE id = ?', (1 if is_active else 0, clan_id))
-            await db.commit()
-
-
-async def get_clan_active_status(clan_id: int) -> bool:
-    """Получить статус активности клана (True — включён)"""
-    url = get_database_url()
-    if url:
-        conn = await asyncpg.connect(url)
-        try:
-            row = await conn.fetchrow('SELECT is_active FROM clans WHERE id = $1', clan_id)
-            return row['is_active'] if row else True
-        finally:
-            await conn.close()
-    else:
-        async with aiosqlite.connect(DB_PATH) as db:
-            cursor = await db.execute('SELECT is_active FROM clans WHERE id = ?', (clan_id,))
-            row = await cursor.fetchone()
-            return bool(row[0]) if row else True
 
 
 # ============================================================
