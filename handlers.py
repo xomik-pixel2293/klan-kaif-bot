@@ -2150,6 +2150,531 @@ async def confirm_clear_test(callback: CallbackQuery):
         reply_markup=admin_menu()
     )
 
+# ============================================================
+# 🏗️ УПРАВЛЕНИЕ КЛАНАМИ (ДОБАВЛЕНИЕ/УДАЛЕНИЕ) - АДМИН
+# ============================================================
+
+class ClanManagementForm(StatesGroup):
+    waiting_new_clan_name = State()
+    waiting_new_clan_emoji = State()
+    waiting_new_clan_leader_id = State()
+    waiting_new_clan_leader_username = State()
+    waiting_new_clan_leader_name = State()
+    waiting_new_clan_deputy_id = State()
+    waiting_new_clan_deputy_username = State()
+    waiting_new_clan_deputy_name = State()
+    waiting_delete_clan_confirm = State()
+    waiting_edit_clan_select = State()
+    waiting_edit_clan_field = State()
+
+
+# ============================================================
+# ➕ ДОБАВЛЕНИЕ КЛАНА
+# ============================================================
+
+@router.callback_query(F.data == 'admin_add_clan')
+async def admin_add_clan_start(callback: CallbackQuery, state: FSMContext):
+    """Начать добавление нового клана"""
+    if callback.from_user.id not in ADMIN_IDS:
+        await callback.answer('⛔ Нет прав')
+        return
+    await callback.answer()
+    
+    await state.set_state(ClanManagementForm.waiting_new_clan_name)
+    await callback.message.edit_text(
+        '🏗️ ДОБАВЛЕНИЕ НОВОГО КЛАНА\n\n'
+        'Введите НАЗВАНИЕ клана:\n'
+        'Например: "MY CLAN" или "LEGENDS"\n\n'
+        '⚠️ Название должно быть уникальным.',
+        reply_markup=back_button('back_to_admin')
+    )
+
+
+@router.message(ClanManagementForm.waiting_new_clan_name)
+async def admin_add_clan_name(message: Message, state: FSMContext):
+    """Получение названия клана"""
+    name = message.text.strip()
+    if not name:
+        await message.answer('❌ Название не может быть пустым. Попробуйте снова:')
+        return
+    
+    # Проверяем, существует ли уже такой клан
+    existing = await get_clan_by_name(name)
+    if existing:
+        await message.answer(f'❌ Клан "{name}" уже существует! Введите другое название:')
+        return
+    
+    await state.update_data(new_clan_name=name)
+    await state.set_state(ClanManagementForm.waiting_new_clan_emoji)
+    await message.answer(
+        f'✅ Название "{name}" сохранено!\n\n'
+        'Введите ЭМОДЗИ для клана:\n'
+        'Например: 🔵 или ⚔️ или 🏆\n\n'
+        'Или отправьте "пропустить" чтобы оставить 🔵',
+        reply_markup=back_button('back_to_admin')
+    )
+
+
+@router.message(ClanManagementForm.waiting_new_clan_emoji)
+async def admin_add_clan_emoji(message: Message, state: FSMContext):
+    """Получение эмодзи клана"""
+    text = message.text.strip()
+    if text.lower() == 'пропустить' or text.lower() == 'skip':
+        emoji = '🔵'
+    else:
+        emoji = text
+    
+    await state.update_data(new_clan_emoji=emoji)
+    await state.set_state(ClanManagementForm.waiting_new_clan_leader_id)
+    await message.answer(
+        f'✅ Эмодзи: {emoji}\n\n'
+        'Введите TELEGRAM ID лидера клана (число):\n'
+        'Например: 123456789\n\n'
+        'Или отправьте "пропустить" чтобы оставить без лидера',
+        reply_markup=back_button('back_to_admin')
+    )
+
+
+@router.message(ClanManagementForm.waiting_new_clan_leader_id)
+async def admin_add_clan_leader_id(message: Message, state: FSMContext):
+    """Получение ID лидера"""
+    text = message.text.strip()
+    leader_id = None
+    if text.lower() not in ['пропустить', 'skip']:
+        try:
+            leader_id = int(text)
+        except:
+            await message.answer('❌ Введите число или "пропустить":')
+            return
+    
+    await state.update_data(new_leader_id=leader_id)
+    await state.set_state(ClanManagementForm.waiting_new_clan_leader_username)
+    await message.answer(
+        f'✅ ID лидера: {leader_id if leader_id else "не указан"}\n\n'
+        'Введите USERNAME лидера (без @):\n'
+        'Например: username\n\n'
+        'Или отправьте "пропустить"',
+        reply_markup=back_button('back_to_admin')
+    )
+
+
+@router.message(ClanManagementForm.waiting_new_clan_leader_username)
+async def admin_add_clan_leader_username(message: Message, state: FSMContext):
+    """Получение username лидера"""
+    text = message.text.strip()
+    username = None if text.lower() in ['пропустить', 'skip'] else text.replace('@', '')
+    
+    await state.update_data(new_leader_username=username)
+    await state.set_state(ClanManagementForm.waiting_new_clan_leader_name)
+    await message.answer(
+        f'✅ Username лидера: {username if username else "не указан"}\n\n'
+        'Введите ИМЯ лидера:\n'
+        'Например: Антон\n\n'
+        'Или отправьте "пропустить"',
+        reply_markup=back_button('back_to_admin')
+    )
+
+
+@router.message(ClanManagementForm.waiting_new_clan_leader_name)
+async def admin_add_clan_leader_name(message: Message, state: FSMContext):
+    """Получение имени лидера"""
+    text = message.text.strip()
+    name = None if text.lower() in ['пропустить', 'skip'] else text
+    
+    await state.update_data(new_leader_name=name)
+    await state.set_state(ClanManagementForm.waiting_new_clan_deputy_id)
+    await message.answer(
+        f'✅ Имя лидера: {name if name else "не указан"}\n\n'
+        'Введите TELEGRAM ID зама клана (число):\n'
+        'Или отправьте "пропустить" чтобы оставить без зама',
+        reply_markup=back_button('back_to_admin')
+    )
+
+
+@router.message(ClanManagementForm.waiting_new_clan_deputy_id)
+async def admin_add_clan_deputy_id(message: Message, state: FSMContext):
+    """Получение ID зама"""
+    text = message.text.strip()
+    deputy_id = None
+    if text.lower() not in ['пропустить', 'skip']:
+        try:
+            deputy_id = int(text)
+        except:
+            await message.answer('❌ Введите число или "пропустить":')
+            return
+    
+    await state.update_data(new_deputy_id=deputy_id)
+    await state.set_state(ClanManagementForm.waiting_new_clan_deputy_username)
+    await message.answer(
+        f'✅ ID зама: {deputy_id if deputy_id else "не указан"}\n\n'
+        'Введите USERNAME зама (без @):\n'
+        'Или отправьте "пропустить"',
+        reply_markup=back_button('back_to_admin')
+    )
+
+
+@router.message(ClanManagementForm.waiting_new_clan_deputy_username)
+async def admin_add_clan_deputy_username(message: Message, state: FSMContext):
+    """Получение username зама"""
+    text = message.text.strip()
+    username = None if text.lower() in ['пропустить', 'skip'] else text.replace('@', '')
+    
+    await state.update_data(new_deputy_username=username)
+    await state.set_state(ClanManagementForm.waiting_new_clan_deputy_name)
+    await message.answer(
+        f'✅ Username зама: {username if username else "не указан"}\n\n'
+        'Введите ИМЯ зама:\n'
+        'Или отправьте "пропустить"',
+        reply_markup=back_button('back_to_admin')
+    )
+
+
+@router.message(ClanManagementForm.waiting_new_clan_deputy_name)
+async def admin_add_clan_deputy_name(message: Message, state: FSMContext):
+    """Получение имени зама и создание клана"""
+    text = message.text.strip()
+    name = None if text.lower() in ['пропустить', 'skip'] else text
+    
+    data = await state.get_data()
+    
+    try:
+        clan_id = await add_clan(
+            name=data['new_clan_name'],
+            emoji=data.get('new_clan_emoji', '🔵'),
+            leader_id=data.get('new_leader_id'),
+            leader_username=data.get('new_leader_username'),
+            leader_name=data.get('new_leader_name'),
+            deputy_id=data.get('new_deputy_id'),
+            deputy_username=data.get('new_deputy_username'),
+            deputy_name=name
+        )
+        
+        emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣'}
+        emoji = data.get('new_clan_emoji', '🔵')
+        
+        await state.clear()
+        await message.answer(
+            f'✅ Клан "{data["new_clan_name"]}" {emoji} создан!\n\n'
+            f'📋 Данные:\n'
+            f'ID: {clan_id}\n'
+            f'Название: {data["new_clan_name"]}\n'
+            f'Эмодзи: {emoji}\n'
+            f'Лидер: {data.get("new_leader_name", "не назначен")}\n'
+            f'Зам: {name if name else "не назначен"}\n\n'
+            f'Теперь вы можете настроить ссылку на чат через кнопку "Связаться" в заявке.',
+            reply_markup=admin_menu()
+        )
+        
+    except Exception as e:
+        await message.answer(f'❌ Ошибка при создании клана: {e}', reply_markup=admin_menu())
+
+
+# ============================================================
+# 🗑 УДАЛЕНИЕ КЛАНА
+# ============================================================
+
+@router.callback_query(F.data == 'admin_delete_clan')
+async def admin_delete_clan_start(callback: CallbackQuery):
+    """Выбор клана для удаления"""
+    if callback.from_user.id not in ADMIN_IDS:
+        await callback.answer('⛔ Нет прав')
+        return
+    await callback.answer()
+    
+    clans = await get_clans_with_status()
+    buttons = []
+    emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣'}
+    
+    for clan_id, name, emoji, is_active in clans:
+        emoji = emojis.get(clan_id, emoji or '🔵')
+        status = '✅' if is_active else '❌'
+        buttons.append([InlineKeyboardButton(
+            text=f'{emoji} {name} {status}',
+            callback_data=f'admin_delete_clan_confirm_{clan_id}'
+        )])
+    
+    buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')])
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+    
+    await callback.message.edit_text(
+        '🗑 УДАЛЕНИЕ КЛАНА\n\n'
+        'Выберите клан для удаления:\n'
+        '⚠️ ВНИМАНИЕ: ВСЕ ЗАЯВКИ ЭТОГО КЛАНА ТОЖЕ БУДУТ УДАЛЕНЫ!\n'
+        'Это действие нельзя отменить!',
+        reply_markup=keyboard
+    )
+
+
+@router.callback_query(F.data.startswith('admin_delete_clan_confirm_'))
+async def admin_delete_clan_confirm(callback: CallbackQuery):
+    """Подтверждение удаления клана"""
+    if callback.from_user.id not in ADMIN_IDS:
+        await callback.answer('⛔ Нет прав')
+        return
+    await callback.answer()
+    
+    clan_id = int(callback.data.split('_')[4])
+    clan = await get_clan(clan_id)
+    if not clan:
+        await callback.message.answer('❌ Клан не найден')
+        return
+    
+    # Проверяем количество заявок
+    apps = await get_clan_applications(clan_id)
+    count = len(apps)
+    
+    await callback.message.edit_text(
+        f'⚠️ ПОДТВЕРЖДЕНИЕ УДАЛЕНИЯ\n\n'
+        f'Вы уверены, что хотите удалить клан "{clan[1]}"?\n\n'
+        f'📊 Заявок в клане: {count}\n\n'
+        f'❌ ВСЕ заявки будут удалены безвозвратно!\n'
+        f'Это действие нельзя отменить!',
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text='✅ ДА, УДАЛИТЬ', callback_data=f'admin_delete_clan_execute_{clan_id}')],
+            [InlineKeyboardButton(text='❌ ОТМЕНА', callback_data='admin_delete_clan')],
+        ])
+    )
+
+
+@router.callback_query(F.data.startswith('admin_delete_clan_execute_'))
+async def admin_delete_clan_execute(callback: CallbackQuery):
+    """Выполнение удаления клана"""
+    if callback.from_user.id not in ADMIN_IDS:
+        await callback.answer('⛔ Нет прав')
+        return
+    await callback.answer()
+    
+    clan_id = int(callback.data.split('_')[4])
+    clan = await get_clan(clan_id)
+    if not clan:
+        await callback.message.answer('❌ Клан не найден')
+        return
+    
+    clan_name = clan[1]
+    
+    try:
+        await delete_clan(clan_id)
+        await callback.message.edit_text(
+            f'✅ Клан "{clan_name}" УДАЛЁН!\n\n'
+            f'Все связанные заявки и ссылки также удалены.',
+            reply_markup=admin_menu()
+        )
+    except Exception as e:
+        await callback.message.answer(f'❌ Ошибка при удалении: {e}', reply_markup=admin_menu())
+
+
+# ============================================================
+# ✏️ РЕДАКТИРОВАНИЕ КЛАНА
+# ============================================================
+
+@router.callback_query(F.data == 'admin_edit_clan')
+async def admin_edit_clan_start(callback: CallbackQuery):
+    """Выбор клана для редактирования"""
+    if callback.from_user.id not in ADMIN_IDS:
+        await callback.answer('⛔ Нет прав')
+        return
+    await callback.answer()
+    
+    clans = await get_clans_with_status()
+    buttons = []
+    emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣'}
+    
+    for clan_id, name, emoji, is_active in clans:
+        emoji = emojis.get(clan_id, emoji or '🔵')
+        buttons.append([InlineKeyboardButton(
+            text=f'{emoji} {name}',
+            callback_data=f'admin_edit_clan_select_{clan_id}'
+        )])
+    
+    buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')])
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+    
+    await callback.message.edit_text(
+        '✏️ РЕДАКТИРОВАНИЕ КЛАНА\n\n'
+        'Выберите клан для редактирования:',
+        reply_markup=keyboard
+    )
+
+
+@router.callback_query(F.data.startswith('admin_edit_clan_select_'))
+async def admin_edit_clan_select(callback: CallbackQuery):
+    """Показать поля для редактирования клана"""
+    if callback.from_user.id not in ADMIN_IDS:
+        await callback.answer('⛔ Нет прав')
+        return
+    await callback.answer()
+    
+    clan_id = int(callback.data.split('_')[4])
+    clan = await get_clan(clan_id)
+    if not clan:
+        await callback.message.answer('❌ Клан не найден')
+        return
+    
+    clan_id, name, emoji, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, is_active, _ = clan
+    
+    await callback.message.edit_text(
+        f'✏️ РЕДАКТИРОВАНИЕ КЛАНА {emoji} {name}\n\n'
+        f'📋 ТЕКУЩИЕ ДАННЫЕ:\n'
+        f'Название: {name}\n'
+        f'Эмодзи: {emoji}\n'
+        f'Лидер: {leader_name or "❌"} (@{leader_username or "❌"}) ID: {leader_id or "❌"}\n'
+        f'Зам: {deputy_name or "❌"} (@{deputy_username or "❌"}) ID: {deputy_id or "❌"}\n\n'
+        f'Выберите что изменить:',
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text='📝 Изменить название', callback_data=f'edit_clan_field_name_{clan_id}')],
+            [InlineKeyboardButton(text='🔄 Изменить эмодзи', callback_data=f'edit_clan_field_emoji_{clan_id}')],
+            [InlineKeyboardButton(text='👑 Изменить лидера', callback_data=f'edit_clan_field_leader_{clan_id}')],
+            [InlineKeyboardButton(text='👤 Изменить зама', callback_data=f'edit_clan_field_deputy_{clan_id}')],
+            [InlineKeyboardButton(text='🔙 Назад', callback_data='admin_edit_clan')],
+        ])
+    )
+
+
+@router.callback_query(F.data.startswith('edit_clan_field_'))
+async def admin_edit_clan_field(callback: CallbackQuery, state: FSMContext):
+    """Начать редактирование конкретного поля"""
+    if callback.from_user.id not in ADMIN_IDS:
+        await callback.answer('⛔ Нет прав')
+        return
+    await callback.answer()
+    
+    parts = callback.data.split('_')
+    field = parts[3]
+    clan_id = int(parts[4])
+    
+    await state.update_data(edit_clan_id=clan_id, edit_field=field)
+    
+    field_names = {
+        'name': 'НАЗВАНИЕ',
+        'emoji': 'ЭМОДЗИ',
+        'leader': 'ЛИДЕРА (введите ID, username, имя через запятую)',
+        'deputy': 'ЗАМА (введите ID, username, имя через запятую)'
+    }
+    
+    examples = {
+        'name': 'Пример: MY NEW CLAN',
+        'emoji': 'Пример: ⚔️',
+        'leader': 'Пример: 123456789, username, Имя',
+        'deputy': 'Пример: 987654321, deputy_username, Имя Зама'
+    }
+    
+    await callback.message.edit_text(
+        f'✏️ ИЗМЕНЕНИЕ {field_names.get(field, field)}\n\n'
+        f'Введите новые данные:\n{examples.get(field, "")}\n\n'
+        f'Или отправьте "пропустить" чтобы оставить как есть.',
+        reply_markup=back_button('admin_edit_clan')
+    )
+    
+    # Устанавливаем состояние в зависимости от поля
+    if field == 'name':
+        await state.set_state(ClanManagementForm.waiting_edit_clan_field)
+    elif field == 'emoji':
+        await state.set_state(ClanManagementForm.waiting_edit_clan_field)
+    elif field == 'leader':
+        await state.set_state(ClanManagementForm.waiting_edit_clan_field)
+    elif field == 'deputy':
+        await state.set_state(ClanManagementForm.waiting_edit_clan_field)
+
+
+@router.message(ClanManagementForm.waiting_edit_clan_field)
+async def admin_edit_clan_field_value(message: Message, state: FSMContext):
+    """Получение нового значения и обновление"""
+    data = await state.get_data()
+    clan_id = data.get('edit_clan_id')
+    field = data.get('edit_field')
+    
+    text = message.text.strip()
+    
+    if text.lower() in ['пропустить', 'skip']:
+        await state.clear()
+        await message.answer('✅ Изменение отменено.', reply_markup=admin_menu())
+        return
+    
+    try:
+        if field == 'name':
+            # Проверяем, не занято ли имя
+            existing = await get_clan_by_name(text)
+            if existing and existing[0] != clan_id:
+                await message.answer(f'❌ Клан "{text}" уже существует! Введите другое название:')
+                return
+            await update_clan(clan_id, name=text)
+            await message.answer(f'✅ Название изменено на "{text}"!')
+            
+        elif field == 'emoji':
+            await update_clan(clan_id, emoji=text)
+            await message.answer(f'✅ Эмодзи изменён на {text}!')
+            
+        elif field == 'leader':
+            # Парсим: ID, username, имя
+            parts = [p.strip() for p in text.split(',')]
+            leader_id = int(parts[0]) if len(parts) > 0 and parts[0].isdigit() else None
+            leader_username = parts[1] if len(parts) > 1 and parts[1] != 'пропустить' else None
+            leader_name = parts[2] if len(parts) > 2 and parts[2] != 'пропустить' else None
+            
+            await update_clan(clan_id, leader_id=leader_id, leader_username=leader_username, leader_name=leader_name)
+            await message.answer(f'✅ Лидер обновлён!\nID: {leader_id}\nUsername: {leader_username}\nИмя: {leader_name}')
+            
+        elif field == 'deputy':
+            parts = [p.strip() for p in text.split(',')]
+            deputy_id = int(parts[0]) if len(parts) > 0 and parts[0].isdigit() else None
+            deputy_username = parts[1] if len(parts) > 1 and parts[1] != 'пропустить' else None
+            deputy_name = parts[2] if len(parts) > 2 and parts[2] != 'пропустить' else None
+            
+            await update_clan(clan_id, deputy_id=deputy_id, deputy_username=deputy_username, deputy_name=deputy_name)
+            await message.answer(f'✅ Зам обновлён!\nID: {deputy_id}\nUsername: {deputy_username}\nИмя: {deputy_name}')
+        
+        await state.clear()
+        await message.answer('📋 Что дальше?', reply_markup=admin_menu())
+        
+    except Exception as e:
+        await message.answer(f'❌ Ошибка: {e}. Попробуйте снова:', reply_markup=back_button('admin_edit_clan'))
+
+
+# ============================================================
+# 🔄 ДОБАВЛЯЕМ КНОПКИ В АДМИН-МЕНЮ
+# ============================================================
+
+# ОБНОВИТЕ admin_menu() В keyboards.py:
+def admin_menu():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='📊 Статистика', callback_data='admin_stats')],
+        [InlineKeyboardButton(text='📤 Экспорт CSV', callback_data='admin_export')],
+        [InlineKeyboardButton(text='👥 Чёрный список', callback_data='admin_blacklist')],
+        [InlineKeyboardButton(text='👥 Управление руководителями', callback_data='admin_manage_roles')],
+        [InlineKeyboardButton(text='🔄 Вкл/Выкл кланы', callback_data='admin_clan_status')],
+        [InlineKeyboardButton(text='🏗️ Управление кланами', callback_data='admin_clan_management')],  # НОВАЯ КНОПКА
+        [InlineKeyboardButton(text='🧪 Тестовая анкета', callback_data='admin_test_application')],
+        [InlineKeyboardButton(text='🗑 Очистить тестовые заявки', callback_data='admin_clear_test')],
+        [InlineKeyboardButton(text='🧑‍💻 Стать кандидатом', callback_data='admin_become_candidate')],
+        [InlineKeyboardButton(text='🔙 Выйти', callback_data='back_to_main')],
+    ])
+
+
+# ============================================================
+# 📋 МЕНЮ УПРАВЛЕНИЯ КЛАНАМИ
+# ============================================================
+
+@router.callback_query(F.data == 'admin_clan_management')
+async def admin_clan_management(callback: CallbackQuery):
+    """Меню управления кланами (добавление/удаление/редактирование)"""
+    if callback.from_user.id not in ADMIN_IDS:
+        await callback.answer('⛔ Нет прав')
+        return
+    await callback.answer()
+    
+    await callback.message.edit_text(
+        '🏗️ УПРАВЛЕНИЕ КЛАНАМИ\n\n'
+        'Выберите действие:\n\n'
+        '➕ Добавить новый клан\n'
+        '🗑 Удалить существующий клан\n'
+        '✏️ Редактировать данные клана',
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text='➕ Добавить клан', callback_data='admin_add_clan')],
+            [InlineKeyboardButton(text='🗑 Удалить клан', callback_data='admin_delete_clan')],
+            [InlineKeyboardButton(text='✏️ Редактировать клан', callback_data='admin_edit_clan')],
+            [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')],
+        ])
+    )
 
 # ============================================================
 # 🔔 НАПОМИНАНИЕ О НЕРАССМОТРЕННЫХ ЗАЯВКАХ
