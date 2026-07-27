@@ -592,7 +592,12 @@ async def about_clans(callback: CallbackQuery):
     }
 
     for clan in clans:
-        clan_id, name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, _ = clan
+        # Безопасная распаковка
+        if len(clan) >= 8:
+            clan_id, name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name = clan[:8]
+        else:
+            continue
+            
         info = clan_data.get(clan_id, {})
         text += f'{info.get("emoji", "🔵")} {info.get("name", name)}\n'
         text += f'   👑 Лидер: {leader_name if leader_name else "❌ не назначен"}\n'
@@ -777,9 +782,19 @@ async def apply_start(callback: CallbackQuery):
         return
     
     # ✅ ИСПОЛЬЗУЕМ await clan_choice()
+    keyboard = await clan_choice()
+    
+    # Проверяем, есть ли активные кланы
+    if not keyboard.inline_keyboard or len(keyboard.inline_keyboard) <= 1:
+        await callback.message.edit_text(
+            '❌ В данный момент ни один клан не принимает заявки.\nПопробуйте позже.',
+            reply_markup=back_button('back_to_main')
+        )
+        return
+    
     await callback.message.edit_text(
         'Выберите клан для подачи заявки:',
-        reply_markup=await clan_choice()
+        reply_markup=keyboard
     )
 
 
@@ -1936,6 +1951,8 @@ async def admin_export(callback: CallbackQuery):
         from openpyxl.utils import get_column_letter
 
         apps = await get_all_applications()
+        print(f"📊 Найдено заявок: {len(apps)}")
+        
         if not apps:
             await callback.message.answer('❌ Нет заявок для экспорта')
             return
@@ -1969,34 +1986,63 @@ async def admin_export(callback: CallbackQuery):
             'revoked': PatternFill(start_color="A6A6A6", end_color="A6A6A6", fill_type="solid"),
         }
 
-        # 🔥 ПОЛУЧАЕМ СПИСОК ВСЕХ РУКОВОДИТЕЛЕЙ ДЛЯ ПОИСКА ИМЁН
+        # ПОЛУЧАЕМ СПИСОК ВСЕХ РУКОВОДИТЕЛЕЙ
         all_leaders = {}
         clans = await get_clans()
         for clan in clans:
-            clan_id, name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, _ = clan
-            if leader_id:
-                all_leaders[leader_id] = leader_username or str(leader_id)
-            if deputy_id:
-                all_leaders[deputy_id] = deputy_username or str(deputy_id)
+            # clan: (id, name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, ...)
+            if len(clan) > 3:
+                leader_id = clan[2] if len(clan) > 2 else None
+                leader_username = clan[3] if len(clan) > 3 else None
+                deputy_id = clan[5] if len(clan) > 5 else None
+                deputy_username = clan[6] if len(clan) > 6 else None
+                
+                if leader_id:
+                    all_leaders[leader_id] = leader_username or str(leader_id)
+                if deputy_id:
+                    all_leaders[deputy_id] = deputy_username or str(deputy_id)
 
         for app in apps:
             # ✅ ПРАВИЛЬНАЯ РАСПАКОВКА (12 полей)
-            (app_id, user_id, username, clan_name, answers_json,
-             photo_old, photo_new, has_photos, status,
-             created_at, reviewed_by, reviewed_at) = app
+            try:
+                if len(app) >= 12:
+                    (app_id, user_id, username, clan_name, answers_json,
+                     photo_old, photo_new, has_photos, status,
+                     created_at, reviewed_by, reviewed_at) = app[:12]
+                else:
+                    # Запасной вариант
+                    app_id = app[0] if len(app) > 0 else None
+                    user_id = app[1] if len(app) > 1 else None
+                    username = app[2] if len(app) > 2 else None
+                    clan_name = app[3] if len(app) > 3 else None
+                    answers_json = app[4] if len(app) > 4 else '{}'
+                    photo_old = app[5] if len(app) > 5 else None
+                    photo_new = app[6] if len(app) > 6 else None
+                    has_photos = app[7] if len(app) > 7 else 0
+                    status = app[8] if len(app) > 8 else 'pending'
+                    created_at = app[9] if len(app) > 9 else None
+                    reviewed_by = app[10] if len(app) > 10 else None
+                    reviewed_at = app[11] if len(app) > 11 else None
+            except Exception as e:
+                print(f"❌ Ошибка распаковки: {e}")
+                continue
 
-            answers = json.loads(answers_json)
+            answers = json.loads(answers_json) if answers_json else {}
 
             # Обработка даты
             if isinstance(created_at, datetime):
                 created_at_str = created_at.strftime('%d.%m.%Y %H:%M')
+            elif created_at:
+                created_at_str = str(created_at)[:16]
             else:
-                created_at_str = str(created_at)[:16] if created_at else ''
+                created_at_str = ''
 
             if isinstance(reviewed_at, datetime):
                 reviewed_at_str = reviewed_at.strftime('%d.%m.%Y %H:%M')
+            elif reviewed_at:
+                reviewed_at_str = str(reviewed_at)[:16]
             else:
-                reviewed_at_str = str(reviewed_at)[:16] if reviewed_at else ''
+                reviewed_at_str = ''
 
             is_test = username == 'test_user' or 'Тест' in answers.get('name', '')
 
@@ -2010,13 +2056,10 @@ async def admin_export(callback: CallbackQuery):
             if is_test:
                 status_ru = '🧪 ' + status_ru + ' (ТЕСТ)'
 
-            # ✅ ПРАВИЛЬНОЕ ПОЛУЧЕНИЕ USERNAME КТО ОДОБРИЛ
             reviewer_username = ''
             if reviewed_by:
-                # Сначала ищем среди руководителей кланов
                 reviewer_username = all_leaders.get(reviewed_by, '')
                 if not reviewer_username:
-                    # Если не нашли — пробуем найти в заявках
                     try:
                         async with aiosqlite.connect(DB_PATH) as db:
                             async with db.execute(
@@ -2028,18 +2071,17 @@ async def admin_export(callback: CallbackQuery):
                                     reviewer_username = result[0]
                     except:
                         pass
-                # Если всё ещё пусто — ставим ID
                 if not reviewer_username:
                     reviewer_username = str(reviewed_by)
 
             row = [
-                app_id, user_id, f'@{username}', clan_name,
+                app_id, user_id, f'@{username}' if username else '', clan_name or '',
                 answers.get('name', ''), answers.get('age', ''),
                 answers.get('nickname', ''), answers.get('id', ''),
                 answers.get('timezone', ''),
                 '✅' if photo_old else '❌',
                 '✅' if photo_new else '❌',
-                has_photos,
+                has_photos or 0,
                 status_ru,
                 created_at_str,
                 reviewed_by if reviewed_by else '',
