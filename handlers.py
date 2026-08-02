@@ -634,8 +634,10 @@ async def about_clans(callback: CallbackQuery):
             'requirements': ['• Возраст: 16+', '• K/D: 1.5+', '• Вынос: 1.5м', '• SMS: 300 в неделю',
                              '• Energy: 2000 в неделю', '• Смена ника: 7 дней']},
         4: {'emoji': '🟣', 'name': 'KAIF ESPORTS — турнирный состав',
-            'requirements': ['• Возраст: 16+', '• SMS: 150 в неделю', '• Energy: 2000 в неделю', '• Смена ника: 3 дня',
-                             '• Ответственность, дисциплина', '• Опыт турниров и праков']}
+    'requirements': ['...']},
+        5: {'emoji': '🟠', 'name': 'TDM',
+    'requirements': ['• Возраст: 16+', '• SMS: 300 в неделю',
+                     '• Смена ника: 3 дня', '• Адекватность', '• Активность в чате']},
     }
 
     for clan in clans:
@@ -1354,7 +1356,8 @@ async def send_link(callback: CallbackQuery, state: FSMContext):
         'KAIF': '51656781871',
         'KAIF ESPORTS': '51600572333',
         'KAIF METRO': '51954255028',
-        'NA KAIFE': '51768659282'
+        'NA KAIFE': '51768659282',
+        'TDM': '6409373909',
     }
     clan_id_game = clan_ids.get(clan_name, 'не указан')
     
@@ -1371,7 +1374,7 @@ async def send_link(callback: CallbackQuery, state: FSMContext):
         f'🎉 ПОЗДРАВЛЯЕМ!\n\n'
         f'Вы прошли отбор и официально приняты в клан {clan_name}!\n\n'
         f'Добро пожаловать в нашу дружную команду! Мы рады, что ты с нами. Впереди — совместные игры, турниры, тренировки и новые достижения.\n\n'
-        f'🔥 Сделай ник с припиской KAIF\n\n'
+        f'🔥 Сделай ник с припиской {clan_name.split()[0] if " " in clan_name else clan_name}\n\n'
         f'📌 Ссылка на чат клана: {link}\n\n'
         f'🆔 ID лидера для подачи заявки в игре: {clan_id_game}\n\n'
         f'📩 Отправил: {sender}\n\n'
@@ -1579,7 +1582,8 @@ async def send_message(callback: CallbackQuery, state: FSMContext):
         'KAIF': '51656781871',
         'KAIF ESPORTS': '51600572333',
         'KAIF METRO': '51954255028',
-        'NA KAIFE': '51768659282'
+        'NA KAIFE': '51768659282',
+        'TDM': '6409373909',
     }
     clan_id_game = clan_ids.get(clan_name, 'не указан')
 
@@ -1595,7 +1599,7 @@ async def send_message(callback: CallbackQuery, state: FSMContext):
         f'🎉 ПОЗДРАВЛЯЕМ!\n\n'
         f'Вы прошли отбор и официально приняты в клан {clan_name}!\n\n'
         f'Добро пожаловать в нашу дружную команду! Мы рады, что ты с нами. Впереди — совместные игры, турниры, тренировки и новые достижения.\n\n'
-        f'🔥 Сделай ник с припиской KAIF\n\n'
+        f'🔥 Сделай ник с припиской {clan_name.split()[0] if " " in clan_name else clan_name}\n\n'
         f'📌 Ссылка на чат клана: {link}\n\n'
         f'🆔 ID лидера для подачи заявки в игре: {clan_id_game}\n\n'
         f'📩 Отправил: {sender}\n\n'
