@@ -635,7 +635,7 @@ async def about_clans(callback: CallbackQuery):
                              '• Energy: 2000 в неделю', '• Смена ника: 7 дней']},
         4: {'emoji': '🟣', 'name': 'KAIF ESPORTS — турнирный состав',
     'requirements': ['...']},
-        5: {'emoji': '🟠', 'name': 'TDM',
+        5: {'emoji': '🟠', 'name': 'KAIF TDM',
     'requirements': ['• Возраст: 16+', '• SMS: 300 в неделю',
                      '• Смена ника: 3 дня', '• Адекватность', '• Активность в чате']},
     }
@@ -1357,7 +1357,7 @@ async def send_link(callback: CallbackQuery, state: FSMContext):
         'KAIF ESPORTS': '51600572333',
         'KAIF METRO': '51954255028',
         'NA KAIFE': '51768659282',
-        'TDM': '6409373909',
+        'KAIF TDM': '6409373909',
     }
     clan_id_game = clan_ids.get(clan_name, 'не указан')
     
@@ -1583,7 +1583,7 @@ async def send_message(callback: CallbackQuery, state: FSMContext):
         'KAIF ESPORTS': '51600572333',
         'KAIF METRO': '51954255028',
         'NA KAIFE': '51768659282',
-        'TDM': '6409373909',
+        'KAIF TDM': '6409373909',
     }
     clan_id_game = clan_ids.get(clan_name, 'не указан')
 
