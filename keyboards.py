@@ -23,7 +23,7 @@ def leader_menu():
 
 
 # ============================================================
-# 🎯 ВЫБОР КЛАНА — ГЛАВНАЯ ФУНКЦИЯ
+# 🎯 ВЫБОР КЛАНА — ДИНАМИЧЕСКАЯ ВЕРСИЯ
 # ============================================================
 
 async def clan_choice():
@@ -32,14 +32,13 @@ async def clan_choice():
         clans = await get_clans_with_status()
     except Exception as e:
         print(f"❌ Ошибка получения кланов: {e}")
-        # Если ошибка — показываем заглушку
         return InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text='❌ Ошибка загрузки', callback_data='noop')],
             [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_main')],
         ])
     
     buttons = []
-    emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣'}
+    emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣', 5: '🟠'}
     
     for clan_id, name, emoji, is_active in clans:
         if is_active:
@@ -159,9 +158,10 @@ def select_existing_leader_buttons(leaders, role_type):
 
 def select_clan_for_role_buttons(clans, role_type, user_id, username, name):
     buttons = []
+    emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣', 5: '🟠'}
     for clan in clans:
         clan_id, clan_name = clan[0], clan[1]
-        emoji = '🔴' if clan_id == 1 else '🟡' if clan_id == 2 else '🟢' if clan_id == 3 else '🟣'
+        emoji = emojis.get(clan_id, '🔵')
         buttons.append([InlineKeyboardButton(
             text=f"{emoji} {clan_name}",
             callback_data=f"assign_to_clan_{role_type}_{clan_id}_{user_id}_{username}_{name}"
@@ -176,6 +176,7 @@ def clan_choice_for_roles():
         [InlineKeyboardButton(text='🟡 NA KAIFE', callback_data='role_clan_2')],
         [InlineKeyboardButton(text='🟢 KAIF METRO', callback_data='role_clan_3')],
         [InlineKeyboardButton(text='🟣 KAIF ESPORTS', callback_data='role_clan_4')],
+        [InlineKeyboardButton(text='🟠 TDM', callback_data='role_clan_5')],
         [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_roles')],
     ])
 
@@ -239,7 +240,7 @@ async def clan_choice_for_test():
         ])
     
     buttons = []
-    emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣'}
+    emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣', 5: '🟠'}
     
     for clan_id, name, emoji, is_active in clans:
         if is_active:
@@ -269,12 +270,13 @@ def admin_clan_status_menu():
         [InlineKeyboardButton(text='🟡 NA KAIFE', callback_data='admin_clan_status_2')],
         [InlineKeyboardButton(text='🟢 KAIF METRO', callback_data='admin_clan_status_3')],
         [InlineKeyboardButton(text='🟣 KAIF ESPORTS', callback_data='admin_clan_status_4')],
+        [InlineKeyboardButton(text='🟠 TDM', callback_data='admin_clan_status_5')],
         [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')],
     ])
 
 
 def clan_toggle_button(clan_id: int, clan_name: str, is_active: bool):
-    emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣'}
+    emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣', 5: '🟠'}
     emoji = emojis.get(clan_id, '🔵')
     status_text = "✅ ВКЛЮЧЁН" if is_active else "❌ ВЫКЛЮЧЁН"
     
