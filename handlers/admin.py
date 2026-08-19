@@ -516,27 +516,19 @@ async def show_roles_list(callback: CallbackQuery):
     
     text = '👥 ТЕКУЩИЕ РУКОВОДИТЕЛИ:\n\n'
     emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣', 5: '🟠'}
-    emoji_names = {1: 'KAIF', 2: 'NA KAIFE', 3: 'KAIF METRO', 4: 'KAIF ESPORTS', 5: 'TDM'}
     
     for clan in clans:
         clan_id = clan[0]
-        clan_name = clan[1] if len(clan) > 1 else emoji_names.get(clan_id, 'Неизвестный')
+        clan_name = clan[1] if len(clan) > 1 else 'Неизвестный'
         emoji = emojis.get(clan_id, '🔵')
         
-        if len(clan) >= 11:
-            leader_id = clan[3] if len(clan) > 3 else None
-            leader_username = clan[4] if len(clan) > 4 else 'None'  # ← ИСПРАВЛЕНО
-            leader_name = clan[5] if len(clan) > 5 else 'None'     # ← ИСПРАВЛЕНО
-            deputy_id = clan[6] if len(clan) > 6 else None
-            deputy_username = clan[7] if len(clan) > 7 else 'None' # ← ИСПРАВЛЕНО
-            deputy_name = clan[8] if len(clan) > 8 else 'None'     # ← ИСПРАВЛЕНО
-        else:
-            leader_id = clan[2] if len(clan) > 2 else None
-            leader_username = clan[3] if len(clan) > 3 else 'None' # ← ИСПРАВЛЕНО
-            leader_name = clan[4] if len(clan) > 4 else 'None'     # ← ИСПРАВЛЕНО
-            deputy_id = clan[5] if len(clan) > 5 else None
-            deputy_username = clan[6] if len(clan) > 6 else 'None' # ← ИСПРАВЛЕНО
-            deputy_name = clan[7] if len(clan) > 7 else 'None'     # ← ИСПРАВЛЕНО
+        # ПРАВИЛЬНЫЙ ПОРЯДОК ПОЛЕЙ:
+        leader_id = clan[3] if len(clan) > 3 else None
+        leader_username = clan[4] if len(clan) > 4 else 'None'
+        leader_name = clan[5] if len(clan) > 5 else 'None'
+        deputy_id = clan[6] if len(clan) > 6 else None
+        deputy_username = clan[7] if len(clan) > 7 else 'None'
+        deputy_name = clan[8] if len(clan) > 8 else 'None'
         
         text += f'{emoji} {clan_name}:\n'
         text += f'   👑 Лидер: {leader_name} (@{leader_username}) (ID: {leader_id})\n'
@@ -546,7 +538,6 @@ async def show_roles_list(callback: CallbackQuery):
         text,
         reply_markup=back_button('back_to_admin')
     )
-
 # ============================================================
 # 🔄 УПРАВЛЕНИЕ СТАТУСОМ КЛАНОВ
 # ============================================================
