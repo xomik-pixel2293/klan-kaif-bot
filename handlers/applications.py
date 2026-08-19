@@ -4,16 +4,17 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InputMediaPhoto
 from aiogram.fsm.context import FSMContext
 
+from config import ADMIN_IDS
 from database import (
     is_in_blacklist, get_clan, get_clan_by_name, get_clan_active_status,
     get_pending_application, add_application,
     update_application_photo_old, update_application_photo_new,
-    update_application_has_photos, review_buttons
+    update_application_has_photos
 )
 from keyboards import (
     back_button, after_apply_buttons, photo_old_button,
     photo_new_button_with_skip, copy_template_button, exit_test_button,
-    clan_choice
+    clan_choice, main_menu, admin_menu, review_buttons
 )
 from .start import ApplicationForm
 
