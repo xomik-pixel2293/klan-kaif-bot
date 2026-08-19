@@ -502,7 +502,7 @@ async def remove_deputy_callback(callback: CallbackQuery):
 
 @router.callback_query(F.data == 'role_list')
 async def show_roles_list(callback: CallbackQuery):
-    """Показать список всех руководителей"""
+    """Показать список всех руководителей (ОТЛАДОЧНАЯ ВЕРСИЯ)"""
     if callback.from_user.id not in ADMIN_IDS:
         await callback.answer('⛔ Нет прав')
         return
@@ -514,43 +514,23 @@ async def show_roles_list(callback: CallbackQuery):
         await callback.message.answer('❌ Кланы не найдены')
         return
     
-    text = '👥 ТЕКУЩИЕ РУКОВОДИТЕЛИ:\n\n'
-    emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣', 5: '🟠'}
+    # 🔍 ВЫВОДИМ СЫРЫЕ ДАННЫЕ
+    debug_text = "🔍 СЫРЫЕ ДАННЫЕ ИЗ БД:\n\n"
     
-    for clan in clans:
-        clan_id = clan[0]
-        clan_name = clan[1]
-        emoji = emojis.get(clan_id, '🔵')
-        
-        # ✅ ПРАВИЛЬНЫЙ ПОРЯДОК (по вашей БД):
-        # [0]=id, [1]=name, [2]=emoji, [3]=leader_id, [4]=leader_username, 
-        # [5]=leader_name, [6]=deputy_id, [7]=deputy_username, [8]=deputy_name
-        
-        leader_id = clan[3] if len(clan) > 3 else None
-        leader_username = clan[4] if len(clan) > 4 else 'None'
-        leader_name = clan[5] if len(clan) > 5 else 'None'
-        deputy_id = clan[6] if len(clan) > 6 else None
-        deputy_username = clan[7] if len(clan) > 7 else 'None'
-        deputy_name = clan[8] if len(clan) > 8 else 'None'
-        
-        # Проверка: если leader_username или leader_name содержат дату - это баг в БД
-        # Для KAIF: если leader_username == 'Лёша', а leader_name == 'KAIFLfrik' - значит поля перепутаны
-        # Исправляем на лету:
-        if leader_username and leader_username in ['Лёша', 'Катя', 'София', 'Виктория', 'Капа', 'Хома', 'Игорь', 'Саид']:
-            # Поля перепутаны - меняем местами
-            leader_username, leader_name = leader_name, leader_username
-        
-        if deputy_username and deputy_username in ['Лёша', 'Катя', 'София', 'Виктория', 'Капа', 'Хома', 'Игорь', 'Саид']:
-            deputy_username, deputy_name = deputy_name, deputy_username
-        
-        text += f'{emoji} {clan_name}:\n'
-        text += f'   👑 Лидер: {leader_name} (@{leader_username}) (ID: {leader_id})\n'
-        text += f'   👤 Зам: {deputy_name} (@{deputy_username}) (ID: {deputy_id})\n\n'
+    for i, clan in enumerate(clans):
+        debug_text += f"Клан {i+1}: {clan[1]}\n"
+        debug_text += f"  Все поля: {clan}\n"
+        debug_text += f"  [0] id: {clan[0]}\n"
+        debug_text += f"  [1] name: {clan[1]}\n"
+        debug_text += f"  [2] emoji: {clan[2] if len(clan) > 2 else 'None'}\n"
+        debug_text += f"  [3] leader_id: {clan[3] if len(clan) > 3 else 'None'}\n"
+        debug_text += f"  [4] leader_username: {clan[4] if len(clan) > 4 else 'None'}\n"
+        debug_text += f"  [5] leader_name: {clan[5] if len(clan) > 5 else 'None'}\n"
+        debug_text += f"  [6] deputy_id: {clan[6] if len(clan) > 6 else 'None'}\n"
+        debug_text += f"  [7] deputy_username: {clan[7] if len(clan) > 7 else 'None'}\n"
+        debug_text += f"  [8] deputy_name: {clan[8] if len(clan) > 8 else 'None'}\n\n"
     
-    await callback.message.edit_text(
-        text,
-        reply_markup=back_button('back_to_admin')
-    )
+    await callback.message.edit_text(debug_text)
 
 
 # ============================================================
