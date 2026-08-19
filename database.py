@@ -980,3 +980,17 @@ async def get_old_pending_applications():
                 ORDER BY a.created_at ASC
             ''')
             return await cursor.fetchall()
+
+import os
+from supabase import create_client
+
+def get_supabase_client():
+    """Получить клиент Supabase (если используется)"""
+    url = os.getenv('SUPABASE_URL')
+    key = os.getenv('SUPABASE_KEY')
+    if url and key:
+        return create_client(url, key)
+    return None
+
+# Для обратной совместимости с admin.py
+supabase = get_supabase_client()
