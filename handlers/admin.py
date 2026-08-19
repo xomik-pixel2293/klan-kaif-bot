@@ -107,15 +107,9 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
     role_name = 'лидером' if role_type == 'leader' else 'замом'
 
     clans = await get_clans()
-    
-    # 🔍 ОТЛАДКА: выводим сырые данные
-    print(f"🔍 ПОЛУЧЕНЫ КЛАНЫ: {clans}")
-    
     leaders = []
     for clan in clans:
-        print(f"🔍 КЛАН: {clan}")
         if len(clan) < 9:
-            print(f"⚠️ Клан {clan[1] if len(clan) > 1 else 'unknown'} имеет {len(clan)} полей, пропускаем")
             continue
             
         clan_id = clan[0]
@@ -123,13 +117,26 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
         
         leader_id = clan[3] if len(clan) > 3 else None
         leader_username = clan[4] if len(clan) > 4 else ''
-        leader_name = clan[5] if len(clan) > 5 else '❌'
+        leader_name = clan[5] if len(clan) > 5 else ''
         deputy_id = clan[6] if len(clan) > 6 else None
         deputy_username = clan[7] if len(clan) > 7 else ''
-        deputy_name = clan[8] if len(clan) > 8 else '❌'
+        deputy_name = clan[8] if len(clan) > 8 else ''
         
-        print(f"🔍 leader_id={leader_id}, leader_username={leader_username}, leader_name={leader_name}")
-        print(f"🔍 deputy_id={deputy_id}, deputy_username={deputy_username}, deputy_name={deputy_name}")
+        # ✅ ФИКС: если leader_name пустой, используем leader_username как имя
+        if not leader_name:
+            leader_name = leader_username or '❌'
+        if not deputy_name:
+            deputy_name = deputy_username or '❌'
+        
+        # ✅ ФИКС: если leader_username содержит имя (кириллица), значит это имя, а не username
+        if leader_username and any(ord(c) > 127 for c in leader_username):
+            # Это имя, а не username — меняем местами
+            leader_name = leader_username
+            leader_username = ''
+        
+        if deputy_username and any(ord(c) > 127 for c in deputy_username):
+            deputy_name = deputy_username
+            deputy_username = ''
         
         if leader_id:
             leaders.append({
@@ -150,10 +157,7 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
                 'role': 'Зам'
             })
 
-    print(f"🔍 СОБРАНО РУКОВОДИТЕЛЕЙ: {leaders}")
-
     if not leaders:
-        # ⚠️ ВАЖНО: используем answer, а не edit_text, чтобы не было ошибки "message is not modified"
         await callback.message.answer(
             '❌ Нет существующих руководителей.\n'
             'Используйте "Ввести нового пользователя".',
@@ -235,16 +239,15 @@ async def select_existing_leader(callback: CallbackQuery, state: FSMContext):
 
     parts = callback.data.split('_')
     
-    # ✅ ПРОВЕРКА: parts[2] должен быть числом (ID), а не строкой
     try:
         user_id = int(parts[2])
-    except ValueError:
+    except (ValueError, IndexError):
         await callback.message.answer('❌ Ошибка: неверный формат ID')
         return
     
     try:
         clan_id = int(parts[3])
-    except ValueError:
+    except (ValueError, IndexError):
         await callback.message.answer('❌ Ошибка: неверный формат клана')
         return
 
@@ -257,29 +260,40 @@ async def select_existing_leader(callback: CallbackQuery, state: FSMContext):
     for clan in clans:
         if len(clan) < 9:
             continue
-        # [0]=id, [1]=name, [2]=emoji, [3]=leader_id, [4]=leader_username,
-        # [5]=leader_name, [6]=deputy_id, [7]=deputy_username, [8]=deputy_name
         
         if clan[3] == user_id:
-            user_info = {'id': clan[3], 'username': clan[4] or '', 'name': clan[5] or 'Пользователь'}
+            user_info = {
+                'id': clan[3], 
+                'username': clan[4] or '', 
+                'name': clan[5] or clan[4] or 'Пользователь'
+            }
             break
         if clan[6] == user_id:
-            user_info = {'id': clan[6], 'username': clan[7] or '', 'name': clan[8] or 'Пользователь'}
+            user_info = {
+                'id': clan[6], 
+                'username': clan[7] or '', 
+                'name': clan[8] or clan[7] or 'Пользователь'
+            }
             break
 
     if not user_info:
         await callback.message.answer('❌ Пользователь не найден')
         return
 
-    await state.update_data(selected_user_id=user_id, selected_username=user_info['username'],
-                            selected_name=user_info['name'])
+    await state.update_data(
+        new_user_id=user_id,
+        selected_username=user_info['username'],
+        selected_name=user_info['name'],
+        pending_name=user_info['name'],
+        new_name=user_info['name'],
+        new_username=user_info['username']
+    )
 
     await callback.message.edit_text(
         f'👤 Выбран: {user_info["name"]} (@{user_info["username"]})\n\n'
         f'Выберите клан для назначения {role_name}:',
         reply_markup=select_clan_for_role_buttons(clans, role_type, user_id, user_info['username'], user_info['name'])
     )
-
 
 @router.callback_query(F.data.startswith('assign_to_clan_'))
 async def assign_to_clan(callback: CallbackQuery, state: FSMContext):
