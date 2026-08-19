@@ -297,11 +297,12 @@ async def assign_to_clan_simple(callback: CallbackQuery, state: FSMContext):
     user_id = int(parts[5])
     username = parts[6] if len(parts) > 6 else ''
     
-    # ✅ БЕРЁМ ИМЯ ИЗ STATE
+    # БЕРЁМ ИМЯ ИЗ STATE
     data = await state.get_data()
     name = data.get('pending_name') or data.get('new_name') or 'Пользователь'
     
     print(f"🔍 Имя из state: {name}")
+    print(f"🔍 User ID для удаления: {user_id}")
 
     # Получаем информацию о клане
     clan = await get_clan(clan_id)
@@ -309,8 +310,32 @@ async def assign_to_clan_simple(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer('❌ Клан не найден')
         return
 
-    # Удаляем пользователя со всех должностей
+    # ======================================================
+    # ✅ УДАЛЯЕМ ПОЛЬЗОВАТЕЛЯ СО ВСЕХ ДОЛЖНОСТЕЙ (УСИЛЕННАЯ ВЕРСИЯ)
+    # ======================================================
+    print(f"🔍 НАЧИНАЕМ УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ {user_id} СО ВСЕХ ДОЛЖНОСТЕЙ")
+    
+    # ВАРИАНТ 1: Прямой SQL-запрос (самый надёжный)
+    try:
+        # Удаляем из лидеров
+        query_leader = "UPDATE clans SET leader_id = NULL, leader_name = NULL, leader_username = NULL WHERE leader_id = $1"
+        await supabase.execute(query_leader, user_id)
+        print(f"🔍 Пользователь {user_id} удалён из всех лидеров (SQL)")
+    except Exception as e:
+        print(f"❌ Ошибка удаления лидера SQL: {e}")
+    
+    try:
+        # Удаляем из замов
+        query_deputy = "UPDATE clans SET deputy_id = NULL, deputy_name = NULL, deputy_username = NULL WHERE deputy_id = $1"
+        await supabase.execute(query_deputy, user_id)
+        print(f"🔍 Пользователь {user_id} удалён из всех замов (SQL)")
+    except Exception as e:
+        print(f"❌ Ошибка удаления зама SQL: {e}")
+    
+    # ВАРИАНТ 2: Через существующие функции (для совместимости)
     clans = await get_clans()
+    print(f"🔍 ВСЕ КЛАНЫ ДЛЯ ПРОВЕРКИ: {clans}")
+    
     for c in clans:
         # Определяем поля в зависимости от структуры
         if len(c) >= 11:
@@ -322,6 +347,8 @@ async def assign_to_clan_simple(callback: CallbackQuery, state: FSMContext):
             leader_id_field = c[2] if len(c) > 2 else None
             deputy_id_field = c[5] if len(c) > 5 else None
             
+        print(f"🔍 Проверяем клан {c_id}: leader_id={leader_id_field}, deputy_id={deputy_id_field}")
+        
         if leader_id_field == user_id:
             await remove_clan_leader(c_id)
             print(f"🔍 Удалён лидер в клане {c_id}")
@@ -349,7 +376,6 @@ async def assign_to_clan_simple(callback: CallbackQuery, state: FSMContext):
         '👥 Управление руководителями\n\nВыберите действие:',
         reply_markup=manage_roles_menu()
     )
-
 
 @router.callback_query(F.data.startswith('select_existing_'))
 async def select_existing_leader(callback: CallbackQuery, state: FSMContext):
