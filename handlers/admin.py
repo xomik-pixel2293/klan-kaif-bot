@@ -116,7 +116,7 @@ async def assign_from_new(callback: CallbackQuery, state: FSMContext):
         await callback.answer('⛔ Нет прав')
         return
     await callback.answer()
-    await state.set_state(RoleForm.waiting_user_id) 
+    await state.set_state(RoleForm.waiting_user_id)
     await callback.message.edit_text(
         '✏️ Введите данные нового пользователя:\n\n'
         '1️⃣ Telegram ID (число):\n'
@@ -124,6 +124,7 @@ async def assign_from_new(callback: CallbackQuery, state: FSMContext):
         '[❌ Отмена]',
         reply_markup=cancel_button()
     )
+
 
 # ============================================================
 # ✏️ ВВЕСТИ НОВОГО ПОЛЬЗОВАТЕЛЯ — ОБРАБОТЧИКИ ВВОДА
@@ -203,6 +204,7 @@ async def process_new_user_name(message: Message, state: FSMContext):
 @router.callback_query(F.data.startswith('assign_to_clan_'))
 async def assign_to_clan(callback: CallbackQuery, state: FSMContext):
     """Назначить пользователя в клан"""
+    print(f"🔍 НАЖАТА КНОПКА: {callback.data}")  # ← ДЛЯ ОТЛАДКИ
     if callback.from_user.id not in ADMIN_IDS:
         await callback.answer('⛔ Нет прав')
         return
@@ -245,6 +247,7 @@ async def assign_to_clan(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.message.answer('👥 Управление руководителями\n\nВыберите действие:', reply_markup=manage_roles_menu())
 
+
 @router.callback_query(F.data.startswith('select_existing_'))
 async def select_existing_leader(callback: CallbackQuery, state: FSMContext):
     if callback.from_user.id not in ADMIN_IDS:
@@ -283,50 +286,6 @@ async def select_existing_leader(callback: CallbackQuery, state: FSMContext):
         f'Выберите клан для назначения {role_name}:',
         reply_markup=select_clan_for_role_buttons(clans, role_type, user_id, user_info['username'], user_info['name'])
     )
-
-
-@router.callback_query(F.data.startswith('assign_to_clan_'))
-async def assign_to_clan(callback: CallbackQuery, state: FSMContext):
-    if callback.from_user.id not in ADMIN_IDS:
-        await callback.answer('⛔ Нет прав')
-        return
-    await callback.answer()
-
-    parts = callback.data.split('_')
-    role_type = parts[3]
-    clan_id = int(parts[4])
-    user_id = int(parts[5])
-    username = parts[6]
-    name = parts[7]
-
-    clan = await get_clan(clan_id)
-    if not clan:
-        await callback.message.answer('❌ Клан не найден')
-        return
-
-    clans = await get_clans()
-    for c in clans:
-        c_id, c_name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, _ = c
-        if leader_id == user_id:
-            await remove_clan_leader(c_id)
-        if deputy_id == user_id:
-            await remove_clan_deputy(c_id)
-
-    if role_type == 'leader':
-        await update_clan_leader(clan_id, user_id, username, name)
-        await callback.message.edit_text(
-            f'✅ {name} (@{username}) назначен лидером клана {clan[1]}!\n'
-            f'Старая должность автоматически удалена.'
-        )
-    else:
-        await update_clan_deputy(clan_id, user_id, username, name)
-        await callback.message.edit_text(
-            f'✅ {name} (@{username}) назначен замом клана {clan[1]}!\n'
-            f'Старая должность автоматически удалена.'
-        )
-
-    await state.clear()
-    await callback.message.answer('👥 Управление руководителями\n\nВыберите действие:', reply_markup=manage_roles_menu())
 
 
 @router.callback_query(F.data == 'role_remove_leader')
