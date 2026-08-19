@@ -2004,7 +2004,7 @@ async def role_remove_select_clan(callback: CallbackQuery):
         f'⚠️ Вы уверены, что хотите удалить руководителя из клана {clan[1]}?',
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text='✅ Да, удалить', callback_data=f'role_confirm_remove_{clan_id}')],
-            [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_roles')],
+            [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')],
         ])
     )
 
