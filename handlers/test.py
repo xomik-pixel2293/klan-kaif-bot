@@ -7,11 +7,12 @@ from aiogram.fsm.context import FSMContext
 from config import ADMIN_IDS
 from database import (
     get_clan, get_clan_active_status,
-    add_application, review_buttons
+    add_application  # ← УБИРАЕМ review_buttons
 )
 from keyboards import (
     test_application_menu, back_button,
-    clan_choice_for_test, admin_menu
+    clan_choice_for_test, admin_menu,
+    review_buttons  # ← ДОБАВЛЯЕМ review_buttons ИЗ keyboards
 )
 from .start import ApplicationForm
 
