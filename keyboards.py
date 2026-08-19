@@ -131,7 +131,7 @@ def manage_roles_menu():
         [InlineKeyboardButton(text='🗑 Удалить лидера', callback_data='role_remove_leader')],
         [InlineKeyboardButton(text='🗑 Удалить зама', callback_data='role_remove_deputy')],
         [InlineKeyboardButton(text='📋 Список руководителей', callback_data='role_list')],
-        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_roles')],  
+        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_roles')],
     ])
 
 
@@ -139,7 +139,7 @@ def assign_choice_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='📋 Выбрать из существующих', callback_data='assign_from_existing')],
         [InlineKeyboardButton(text='✏️ Ввести нового пользователя', callback_data='assign_from_new')],
-        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_roles')],  
+        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_roles')],
     ])
 
 
