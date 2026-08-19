@@ -126,7 +126,8 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
         deputy_username = clan[7] if len(clan) > 7 else ''
         deputy_name = clan[8] if len(clan) > 8 else '❌'
         
-        if leader_id:
+        # ✅ ПРОВЕРКА: leader_id должен быть числом!
+        if leader_id and isinstance(leader_id, int):
             leaders.append({
                 'id': leader_id,
                 'username': leader_username or '',
@@ -135,7 +136,7 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
                 'clan_id': clan_id,
                 'role': 'Лидер'
             })
-        if deputy_id:
+        if deputy_id and isinstance(deputy_id, int):
             leaders.append({
                 'id': deputy_id,
                 'username': deputy_username or '',
@@ -226,8 +227,19 @@ async def select_existing_leader(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
     parts = callback.data.split('_')
-    user_id = int(parts[2])
-    clan_id = int(parts[3])
+    
+    # ✅ ПРОВЕРКА: parts[2] должен быть числом (ID), а не строкой
+    try:
+        user_id = int(parts[2])
+    except ValueError:
+        await callback.message.answer('❌ Ошибка: неверный формат ID')
+        return
+    
+    try:
+        clan_id = int(parts[3])
+    except ValueError:
+        await callback.message.answer('❌ Ошибка: неверный формат клана')
+        return
 
     data = await state.get_data()
     role_type = data.get('role_type', 'leader')
@@ -236,12 +248,16 @@ async def select_existing_leader(callback: CallbackQuery, state: FSMContext):
     clans = await get_clans()
     user_info = None
     for clan in clans:
-        clan_id_db, name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, _ = clan
-        if leader_id == user_id:
-            user_info = {'id': leader_id, 'username': leader_username, 'name': leader_name}
+        if len(clan) < 9:
+            continue
+        # [0]=id, [1]=name, [2]=emoji, [3]=leader_id, [4]=leader_username,
+        # [5]=leader_name, [6]=deputy_id, [7]=deputy_username, [8]=deputy_name
+        
+        if clan[3] == user_id:
+            user_info = {'id': clan[3], 'username': clan[4] or '', 'name': clan[5] or 'Пользователь'}
             break
-        if deputy_id == user_id:
-            user_info = {'id': deputy_id, 'username': deputy_username, 'name': deputy_name}
+        if clan[6] == user_id:
+            user_info = {'id': clan[6], 'username': clan[7] or '', 'name': clan[8] or 'Пользователь'}
             break
 
     if not user_info:
