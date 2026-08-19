@@ -288,6 +288,23 @@ def clan_toggle_button(clan_id: int, clan_name: str, is_active: bool):
         [InlineKeyboardButton(text='🔙 Назад', callback_data='admin_clan_status')],
     ])
 
+# ============================================================
+# 👤 ВЫБОР КЛАНА ДЛЯ НОВОГО ПОЛЬЗОВАТЕЛЯ (БЕЗ ИМЕНИ В CALLBACK)
+# ============================================================
+
+def select_clan_for_role_buttons_simple(clans, role_type, user_id, username):
+    """Клавиатура выбора клана (без имени в callback_data)"""
+    buttons = []
+    emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣', 5: '🟠'}
+    for clan in clans:
+        clan_id, clan_name = clan[0], clan[1]
+        emoji = emojis.get(clan_id, '🔵')
+        buttons.append([InlineKeyboardButton(
+            text=f"{emoji} {clan_name}",
+            callback_data=f"assign_to_clan_simple_{role_type}_{clan_id}_{user_id}_{username}"
+        )])
+    buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 # ============================================================
 # 🏗️ УПРАВЛЕНИЕ КЛАНАМИ (ДОБАВЛЕНИЕ/УДАЛЕНИЕ/РЕДАКТИРОВАНИЕ)
