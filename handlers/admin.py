@@ -109,13 +109,17 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
     clans = await get_clans()
     leaders = []
     for clan in clans:
-        # ПРАВИЛЬНЫЙ ПОРЯДОК ПОЛЕЙ:
+        if len(clan) < 9:
+            continue
+            
+        clan_id = clan[0]
+        clan_name = clan[1]
+        
+        # ПРАВИЛЬНЫЕ ИНДЕКСЫ ДЛЯ ВАШЕЙ БД:
         # [0]=id, [1]=name, [2]=emoji, [3]=leader_id, [4]=leader_username,
         # [5]=leader_name, [6]=deputy_id, [7]=deputy_username, [8]=deputy_name
         
-        clan_id = clan[0] if len(clan) > 0 else None
-        name = clan[1] if len(clan) > 1 else 'Неизвестный'
-        leader_id = clan[3] if len(clan) > 3 else None
+        leader_id = clan[3]
         leader_username = clan[4] if len(clan) > 4 else ''
         leader_name = clan[5] if len(clan) > 5 else '❌'
         deputy_id = clan[6] if len(clan) > 6 else None
@@ -127,7 +131,7 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
                 'id': leader_id,
                 'username': leader_username or '',
                 'name': leader_name or '❌',
-                'clan': name,
+                'clan': clan_name,
                 'clan_id': clan_id,
                 'role': 'Лидер'
             })
@@ -136,7 +140,7 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
                 'id': deputy_id,
                 'username': deputy_username or '',
                 'name': deputy_name or '❌',
-                'clan': name,
+                'clan': clan_name,
                 'clan_id': clan_id,
                 'role': 'Зам'
             })
@@ -157,7 +161,6 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
         text += f"\n... и ещё {len(leaders) - 10} человек"
 
     await callback.message.edit_text(text, reply_markup=select_existing_leader_buttons(leaders, role_type))
-
 
 @router.callback_query(F.data == 'assign_from_new')
 async def assign_from_new(callback: CallbackQuery, state: FSMContext):
