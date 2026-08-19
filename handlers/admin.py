@@ -4,7 +4,6 @@ from datetime import datetime
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.fsm.context import FSMContext
-
 from config import ADMIN_IDS
 from database import *
 from keyboards import *
@@ -415,24 +414,26 @@ async def role_list(callback: CallbackQuery):
     emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣', 5: '🟠'}
 
     for clan in clans:
+        # ✅ ПРАВИЛЬНАЯ РАСПАКОВКА
+        # clan: (id, name, emoji, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, is_active, created_at)
         if len(clan) >= 11:
             clan_id = clan[0]
             name = clan[1]
-            leader_name = clan[5] if len(clan) > 5 else None
-            leader_username = clan[4] if len(clan) > 4 else None
             leader_id = clan[3] if len(clan) > 3 else None
-            deputy_name = clan[8] if len(clan) > 8 else None
-            deputy_username = clan[7] if len(clan) > 7 else None
+            leader_username = clan[4] if len(clan) > 4 else None
+            leader_name = clan[5] if len(clan) > 5 else None
             deputy_id = clan[6] if len(clan) > 6 else None
+            deputy_username = clan[7] if len(clan) > 7 else None
+            deputy_name = clan[8] if len(clan) > 8 else None
         else:
             clan_id = clan[0]
             name = clan[1]
-            leader_name = clan[4] if len(clan) > 4 else None
-            leader_username = clan[3] if len(clan) > 3 else None
             leader_id = clan[2] if len(clan) > 2 else None
-            deputy_name = clan[7] if len(clan) > 7 else None
-            deputy_username = clan[6] if len(clan) > 6 else None
+            leader_username = clan[3] if len(clan) > 3 else None
+            leader_name = clan[4] if len(clan) > 4 else None
             deputy_id = clan[5] if len(clan) > 5 else None
+            deputy_username = clan[6] if len(clan) > 6 else None
+            deputy_name = clan[7] if len(clan) > 7 else None
             
         emoji = emojis.get(clan_id, '🔵')
 
