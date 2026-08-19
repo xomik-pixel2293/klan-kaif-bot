@@ -1247,3 +1247,17 @@ async def admin_edit_clan_field_value(message: Message, state: FSMContext):
         
     except Exception as e:
         await message.answer(f'❌ Ошибка: {e}. Попробуйте снова:', reply_markup=back_button('admin_edit_clan'))
+
+# ============================================================
+# 🔙 НАЗАД К УПРАВЛЕНИЮ РУКОВОДИТЕЛЯМИ
+# ============================================================
+
+@router.callback_query(F.data == 'back_to_roles')
+async def back_to_roles(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await state.clear()
+    await callback.message.edit_text(
+        '👥 Управление руководителями\n\n'
+        'Здесь вы можете назначить или удалить лидера/зама для любого клана.',
+        reply_markup=manage_roles_menu()
+    )
