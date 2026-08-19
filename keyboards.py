@@ -131,7 +131,7 @@ def manage_roles_menu():
         [InlineKeyboardButton(text='🗑 Удалить лидера', callback_data='role_remove_leader')],
         [InlineKeyboardButton(text='🗑 Удалить зама', callback_data='role_remove_deputy')],
         [InlineKeyboardButton(text='📋 Список руководителей', callback_data='role_list')],
-        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_roles')],
+        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')],
     ])
 
 
@@ -139,7 +139,7 @@ def assign_choice_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='📋 Выбрать из существующих', callback_data='assign_from_existing')],
         [InlineKeyboardButton(text='✏️ Ввести нового пользователя', callback_data='assign_from_new')],
-        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_roles')],
+        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')],
     ])
 
 
@@ -152,7 +152,7 @@ def select_existing_leader_buttons(leaders, role_type):
             callback_data=f"select_existing_{leader['id']}_{leader['clan_id']}"
         )])
     buttons.append([InlineKeyboardButton(text='✏️ Ввести нового пользователя', callback_data='assign_from_new')])
-    buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_roles')])
+    buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -166,7 +166,7 @@ def select_clan_for_role_buttons(clans, role_type, user_id, username, name):
             text=f"{emoji} {clan_name}",
             callback_data=f"assign_to_clan_{role_type}_{clan_id}_{user_id}_{username}_{name}"
         )])
-    buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_roles')])
+    buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -177,13 +177,13 @@ def clan_choice_for_roles():
         [InlineKeyboardButton(text='🟢 KAIF METRO', callback_data='role_clan_3')],
         [InlineKeyboardButton(text='🟣 KAIF ESPORTS', callback_data='role_clan_4')],
         [InlineKeyboardButton(text='🟠 TDM', callback_data='role_clan_5')],
-        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_roles')],
+        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')],
     ])
 
 
 def cancel_button():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='❌ Отмена', callback_data='back_to_roles')],
+        [InlineKeyboardButton(text='❌ Отмена', callback_data='back_to_admin')],
     ])
 
 
