@@ -301,7 +301,7 @@ def select_clan_for_role_buttons_simple(clans, role_type, user_id, username):
         emoji = emojis.get(clan_id, '🔵')
         buttons.append([InlineKeyboardButton(
             text=f"{emoji} {clan_name}",
-            callback_data=f"assign_to_clan_simple_{role_type}_{clan_id}_{user_id}_{username}"
+            callback_data=f"clan_assign_{role_type}_{clan_id}_{user_id}_{username}"
         )])
     buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
