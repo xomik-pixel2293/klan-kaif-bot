@@ -228,7 +228,7 @@ async def assign_to_clan(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
     parts = callback.data.split('_')
-    role_type = parts[3]
+    role_type = parts[3]  # leader или deputy
     clan_id = int(parts[4])
     user_id = int(parts[5])
     username = parts[6]
@@ -239,10 +239,9 @@ async def assign_to_clan(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer('❌ Клан не найден')
         return
 
-    # ✅ ПРАВИЛЬНАЯ РАСПАКОВКА (учитываем emoji и is_active)
+    # ✅ УДАЛЯЕМ ПОЛЬЗОВАТЕЛЯ СО ВСЕХ ДОЛЖНОСТЕЙ (и лидер, и зам)
     clans = await get_clans()
     for c in clans:
-        # clan: (id, name, emoji, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, is_active, created_at)
         if len(c) >= 11:
             c_id = c[0]
             leader_id_field = c[3] if len(c) > 3 else None
@@ -252,11 +251,16 @@ async def assign_to_clan(callback: CallbackQuery, state: FSMContext):
             leader_id_field = c[2] if len(c) > 2 else None
             deputy_id_field = c[5] if len(c) > 5 else None
             
+        # Удаляем пользователя с должности лидера (в любом клане)
         if leader_id_field == user_id:
             await remove_clan_leader(c_id)
+            print(f"🔍 Удалён лидер в клане {c_id}")
+        # Удаляем пользователя с должности зама (в любом клане)
         if deputy_id_field == user_id:
             await remove_clan_deputy(c_id)
+            print(f"🔍 Удалён зам в клане {c_id}")
 
+    # ✅ НАЗНАЧАЕМ НА НОВУЮ ДОЛЖНОСТЬ
     if role_type == 'leader':
         await update_clan_leader(clan_id, user_id, username, name)
         await callback.message.edit_text(
