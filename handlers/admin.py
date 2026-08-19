@@ -111,16 +111,21 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
     for clan in clans:
         if len(clan) < 9:
             continue
-            
+        
+        # ПРАВИЛЬНЫЙ ПОРЯДОК ИЗ ЛОГОВ:
+        # [0]=id, [1]=name, [2]=leader_id, [3]=leader_username,
+        # [4]=leader_name, [5]=deputy_id, [6]=deputy_username,
+        # [7]=deputy_name, [8]=created_at, [9]=is_active, [10]=emoji
+        
         clan_id = clan[0]
         clan_name = clan[1]
         
-        leader_id = clan[3] if len(clan) > 3 else None
-        leader_username = clan[4] if len(clan) > 4 else ''
-        leader_name = clan[5] if len(clan) > 5 else ''
-        deputy_id = clan[6] if len(clan) > 6 else None
-        deputy_username = clan[7] if len(clan) > 7 else ''
-        deputy_name = clan[8] if len(clan) > 8 else ''
+        leader_id = clan[2] if len(clan) > 2 else None
+        leader_username = clan[3] if len(clan) > 3 else ''
+        leader_name = clan[4] if len(clan) > 4 else ''
+        deputy_id = clan[5] if len(clan) > 5 else None
+        deputy_username = clan[6] if len(clan) > 6 else ''
+        deputy_name = clan[7] if len(clan) > 7 else ''
         
         # ✅ ФИКС: если leader_name пустой, используем leader_username как имя
         if not leader_name:
@@ -130,7 +135,6 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
         
         # ✅ ФИКС: если leader_username содержит имя (кириллица), значит это имя, а не username
         if leader_username and any(ord(c) > 127 for c in leader_username):
-            # Это имя, а не username — меняем местами
             leader_name = leader_username
             leader_username = ''
         
@@ -138,7 +142,7 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
             deputy_name = deputy_username
             deputy_username = ''
         
-        if leader_id:
+        if leader_id and isinstance(leader_id, int):
             leaders.append({
                 'id': leader_id,
                 'username': leader_username or '',
@@ -147,7 +151,7 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
                 'clan_id': clan_id,
                 'role': 'Лидер'
             })
-        if deputy_id:
+        if deputy_id and isinstance(deputy_id, int):
             leaders.append({
                 'id': deputy_id,
                 'username': deputy_username or '',
@@ -260,19 +264,22 @@ async def select_existing_leader(callback: CallbackQuery, state: FSMContext):
     for clan in clans:
         if len(clan) < 9:
             continue
+        # ПРАВИЛЬНЫЙ ПОРЯДОК:
+        # [0]=id, [1]=name, [2]=leader_id, [3]=leader_username,
+        # [4]=leader_name, [5]=deputy_id, [6]=deputy_username, [7]=deputy_name
         
-        if clan[3] == user_id:
+        if clan[2] == user_id:  # leader_id на [2]
             user_info = {
-                'id': clan[3], 
-                'username': clan[4] or '', 
-                'name': clan[5] or clan[4] or 'Пользователь'
+                'id': clan[2],
+                'username': clan[3] or '',
+                'name': clan[4] or clan[3] or 'Пользователь'
             }
             break
-        if clan[6] == user_id:
+        if clan[5] == user_id:  # deputy_id на [5]
             user_info = {
-                'id': clan[6], 
-                'username': clan[7] or '', 
-                'name': clan[8] or clan[7] or 'Пользователь'
+                'id': clan[5],
+                'username': clan[6] or '',
+                'name': clan[7] or clan[6] or 'Пользователь'
             }
             break
 
@@ -294,6 +301,7 @@ async def select_existing_leader(callback: CallbackQuery, state: FSMContext):
         f'Выберите клан для назначения {role_name}:',
         reply_markup=select_clan_for_role_buttons(clans, role_type, user_id, user_info['username'], user_info['name'])
     )
+
 
 @router.callback_query(F.data.startswith('assign_to_clan_'))
 async def assign_to_clan(callback: CallbackQuery, state: FSMContext):
