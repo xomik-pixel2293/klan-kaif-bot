@@ -232,11 +232,11 @@ async def assign_to_clan(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
     parts = callback.data.split('_')
-    role_type = parts[3]  # leader или deputy
+    role_type = parts[3]
     clan_id = int(parts[4])
     user_id = int(parts[5])
     username = parts[6]
-    name = parts[7]
+    name = parts[7].replace('_', ' ')  
 
     clan = await get_clan(clan_id)
     if not clan:
