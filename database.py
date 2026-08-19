@@ -6,23 +6,6 @@ from datetime import datetime
 
 DB_PATH = 'klan_kaif.db'
 
-# ============================================================
-# 📌 ДАННЫЕ КЛАНОВ
-# ============================================================
-
-CLANS_DATA = [
-    {'id': 1, 'name': 'KAIF', 'emoji': '🔴', 'leader_id': 8029326399, 'leader_username': 'KAIFLfrik', 'leader_name': 'Лёша',
-     'deputy_id': None, 'deputy_username': None, 'deputy_name': None},
-    {'id': 2, 'name': 'NA KAIFE', 'emoji': '🟡', 'leader_id': 7271067034, 'leader_username': 'Vibnot', 'leader_name': 'Катя',
-     'deputy_id': 884404620, 'deputy_username': 'KAIFBOOK', 'deputy_name': 'Игорь'},
-    {'id': 3, 'name': 'KAIF METRO', 'emoji': '🟢', 'leader_id': 5590623366, 'leader_username': 'gold_Histori', 'leader_name': 'София',
-     'deputy_id': 1622791763, 'deputy_username': 'Xoma9991', 'deputy_name': 'Xoma'},
-    {'id': 4, 'name': 'KAIF ESPORTS', 'emoji': '🟣', 'leader_id': 643813214, 'leader_username': 'vi_sergeeevna',
-     'leader_name': 'Виктория', 'deputy_id': 5346986362, 'deputy_username': 'DiamirManager', 'deputy_name': 'Саид'},
-    {'id': 5, 'name': 'TDM', 'emoji': '🟠', 'leader_id': 6409373909, 'leader_username': 'Kapa19_07', 'leader_name': 'Капа',
-     'deputy_id': None, 'deputy_username': None, 'deputy_name': None},
-]
-
 
 # ============================================================
 # 🔌 ПОДКЛЮЧЕНИЕ К БД
@@ -74,28 +57,9 @@ async def init_db():
                 else:
                     print(f"⚠️ Ошибка при добавлении is_active: {e}")
             
-            # ✅ ОБНОВЛЯЕМ ДАННЫЕ КЛАНОВ
-            for clan in CLANS_DATA:
-                await conn.execute('''
-                    INSERT INTO clans (id, name, emoji, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, is_active)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE)
-                    ON CONFLICT (id) DO UPDATE SET
-                        name = EXCLUDED.name,
-                        emoji = EXCLUDED.emoji,
-                        leader_id = EXCLUDED.leader_id,
-                        leader_username = EXCLUDED.leader_username,
-                        leader_name = EXCLUDED.leader_name,
-                        deputy_id = EXCLUDED.deputy_id,
-                        deputy_username = EXCLUDED.deputy_username,
-                        deputy_name = EXCLUDED.deputy_name,
-                        is_active = EXCLUDED.is_active
-                ''', clan['id'], clan['name'], clan.get('emoji', '🔵'), 
-                    clan['leader_id'], clan['leader_username'], clan['leader_name'],
-                    clan['deputy_id'], clan['deputy_username'], clan['deputy_name'])
-            
-            print("✅ Supabase подключена и инициализирована!")
+            print("✅ База данных подключена и инициализирована!")
         except Exception as e:
-            print(f"❌ Ошибка при инициализации Supabase: {e}")
+            print(f"❌ Ошибка при инициализации: {e}")
         finally:
             await conn.close()
     else:
@@ -164,14 +128,6 @@ async def init_db():
                 await db.execute('ALTER TABLE clans ADD COLUMN emoji TEXT DEFAULT "🔵"')
             except:
                 pass
-            
-            for clan in CLANS_DATA:
-                await db.execute('''
-                    INSERT OR IGNORE INTO clans (id, name, emoji, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, is_active)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-                ''', (clan['id'], clan['name'], clan.get('emoji', '🔵'), 
-                      clan['leader_id'], clan['leader_username'], clan['leader_name'],
-                      clan['deputy_id'], clan['deputy_username'], clan['deputy_name']))
             
             await db.commit()
             print("✅ SQLite инициализирована (локальный режим)")
@@ -980,6 +936,11 @@ async def get_old_pending_applications():
                 ORDER BY a.created_at ASC
             ''')
             return await cursor.fetchall()
+
+
+# ============================================================
+# 🔌 SUPABASE КЛИЕНТ (ДЛЯ ПРЯМЫХ ЗАПРОСОВ)
+# ============================================================
 
 import os
 from supabase import create_client
