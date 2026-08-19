@@ -71,15 +71,16 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
     clans = await get_clans()
     leaders = []
     for clan in clans:
-        if len(clan) >= 11:
+        # ✅ ПРАВИЛЬНАЯ РАСПАКОВКА (9 полей)
+        if len(clan) >= 9:
             clan_id = clan[0]
             name = clan[1]
-            leader_id = clan[3] if len(clan) > 3 else None
-            leader_username = clan[4] if len(clan) > 4 else None
-            leader_name = clan[5] if len(clan) > 5 else None
-            deputy_id = clan[6] if len(clan) > 6 else None
-            deputy_username = clan[7] if len(clan) > 7 else None
-            deputy_name = clan[8] if len(clan) > 8 else None
+            leader_id = clan[2] if len(clan) > 2 else None
+            leader_username = clan[3] if len(clan) > 3 else None
+            leader_name = clan[4] if len(clan) > 4 else None
+            deputy_id = clan[5] if len(clan) > 5 else None
+            deputy_username = clan[6] if len(clan) > 6 else None
+            deputy_name = clan[7] if len(clan) > 7 else None
         else:
             clan_id = clan[0]
             name = clan[1]
@@ -125,7 +126,6 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
         text += f"\n... и ещё {len(leaders) - 10} человек"
 
     await callback.message.edit_text(text, reply_markup=select_existing_leader_buttons(leaders, role_type))
-
 
 @router.callback_query(F.data == 'assign_from_new')
 async def assign_from_new(callback: CallbackQuery, state: FSMContext):
@@ -414,18 +414,19 @@ async def role_list(callback: CallbackQuery):
     emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣', 5: '🟠'}
 
     for clan in clans:
-        # ✅ ПРАВИЛЬНАЯ РАСПАКОВКА
-        # clan: (id, name, emoji, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, is_active, created_at)
-        if len(clan) >= 11:
+        # ✅ ПРАВИЛЬНАЯ РАСПАКОВКА (9 полей)
+        # clan: (id, name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, created_at)
+        if len(clan) >= 9:
             clan_id = clan[0]
             name = clan[1]
-            leader_id = clan[3] if len(clan) > 3 else None
-            leader_username = clan[4] if len(clan) > 4 else None
-            leader_name = clan[5] if len(clan) > 5 else None
-            deputy_id = clan[6] if len(clan) > 6 else None
-            deputy_username = clan[7] if len(clan) > 7 else None
-            deputy_name = clan[8] if len(clan) > 8 else None
+            leader_id = clan[2] if len(clan) > 2 else None
+            leader_username = clan[3] if len(clan) > 3 else None
+            leader_name = clan[4] if len(clan) > 4 else None
+            deputy_id = clan[5] if len(clan) > 5 else None
+            deputy_username = clan[6] if len(clan) > 6 else None
+            deputy_name = clan[7] if len(clan) > 7 else None
         else:
+            # Запасной вариант
             clan_id = clan[0]
             name = clan[1]
             leader_id = clan[2] if len(clan) > 2 else None
@@ -453,7 +454,6 @@ async def role_list(callback: CallbackQuery):
         text += '\n\n'
 
     await callback.message.edit_text(text, reply_markup=back_button('back_to_roles'))
-
 
 # ============================================================
 # 🗑 ОЧИСТИТЬ ТЕСТОВЫЕ ЗАЯВКИ
