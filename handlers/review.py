@@ -11,7 +11,7 @@ from database import (
 )
 from keyboards import (
     back_button, contact_button, contact_menu, contact_with_link,
-    review_buttons, after_apply_buttons
+    review_buttons, after_apply_buttons, main_menu
 )
 from .start import ApplicationForm
 
@@ -27,6 +27,7 @@ async def my_clan_applications(callback: CallbackQuery):
     await callback.answer()
     clan = await get_clan_by_user(callback.from_user.id)
     if not clan:
+        await callback.message.answer('⛔ У вас нет прав на это действие')
         return
 
     clan_id, name = clan[0], clan[1]
@@ -73,6 +74,10 @@ async def my_clan_applications(callback: CallbackQuery):
     
     await callback.message.edit_text(text, reply_markup=keyboard)
 
+
+# ============================================================
+# 👁️ ПРОСМОТР ЗАЯВКИ
+# ============================================================
 
 @router.callback_query(F.data.startswith('view_app_'))
 async def view_application_detail(callback: CallbackQuery):
