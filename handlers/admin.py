@@ -34,6 +34,7 @@ async def process_new_user_name(message: Message, state: FSMContext):
     
     await state.update_data(new_name=name)
     await state.update_data(pending_name=name)
+    await state.update_data(new_username=username)  # ← СОХРАНЯЕМ USERNAME
     
     clans = await get_clans()
     text_msg = f'👤 Новый пользователь:\n'
@@ -48,7 +49,6 @@ async def process_new_user_name(message: Message, state: FSMContext):
         text_msg,
         reply_markup=select_clan_for_role_buttons_simple(clans, role_type, user_id, username or '')
     )
-
 
 # ============================================================
 # 👥 УПРАВЛЕНИЕ РУКОВОДИТЕЛЯМИ
@@ -313,31 +313,30 @@ async def assign_to_clan(callback: CallbackQuery, state: FSMContext):
     parts = callback.data.split('_')
     
     try:
+        # Формат: assign_to_clan_{role_type}_{clan_id}_{user_id}
         role_type = parts[3]
         clan_id = int(parts[4])
         user_id = int(parts[5])
-        username = parts[6] if len(parts) > 6 and parts[6] != 'None' else ''
-        
-        if len(parts) > 7 and parts[7] != 'None':
-            name = parts[7]
-        else:
-            data = await state.get_data()
-            name = data.get('pending_name') or data.get('new_name') or username or 'Пользователь'
-    except (ValueError, IndexError) as e:
-        await callback.message.answer(f'❌ Ошибка: неверный формат данных')
+    except (ValueError, IndexError):
+        await callback.message.answer('❌ Ошибка: неверный формат данных')
         return
+
+    # ✅ БЕРЁМ ВСЁ ИЗ STATE!
+    data = await state.get_data()
+    username = data.get('new_username') or data.get('selected_username') or ''
+    name = data.get('pending_name') or data.get('new_name') or data.get('selected_name') or 'Пользователь'
 
     clan = await get_clan(clan_id)
     if not clan:
         await callback.message.answer('❌ Клан не найден')
         return
 
-    # Удаляем пользователя со всех должностей (ПРАВИЛЬНЫЕ ИНДЕКСЫ!)
+    # Удаляем пользователя со всех должностей
     clans = await get_clans()
     for c in clans:
-        if len(c) > 2 and c[2] == user_id:  # leader_id на [2]
+        if len(c) > 2 and c[2] == user_id:
             await remove_clan_leader(c[0])
-        if len(c) > 5 and c[5] == user_id:  # deputy_id на [5]
+        if len(c) > 5 and c[5] == user_id:
             await remove_clan_deputy(c[0])
 
     if role_type == 'leader':
