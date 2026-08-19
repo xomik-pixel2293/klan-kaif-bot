@@ -14,7 +14,7 @@ router = Router()
 
 
 # ============================================================
-# 👤 ОБРАБОТКА ВВОДА ИМЕНИ (НОВАЯ ФУНКЦИЯ)
+# 👤 ОБРАБОТКА ВВОДА ИМЕНИ
 # ============================================================
 
 @router.message(RoleForm.waiting_name)
@@ -364,12 +364,12 @@ async def role_list(callback: CallbackQuery):
         if len(clan) >= 9:
             clan_id = clan[0]
             name = clan[1]
-            leader_id = clan[3] if len(clan) > 3 else None
-            leader_username = clan[4] if len(clan) > 4 else None
-            leader_name = clan[5] if len(clan) > 5 else None
-            deputy_id = clan[6] if len(clan) > 6 else None
-            deputy_username = clan[7] if len(clan) > 7 else None
-            deputy_name = clan[8] if len(clan) > 8 else None
+            leader_id = clan[2] if len(clan) > 2 else None
+            leader_username = clan[3] if len(clan) > 3 else None
+            leader_name = clan[4] if len(clan) > 4 else None
+            deputy_id = clan[5] if len(clan) > 5 else None
+            deputy_username = clan[6] if len(clan) > 6 else None
+            deputy_name = clan[7] if len(clan) > 7 else None
         else:
             continue
             
@@ -390,7 +390,8 @@ async def role_list(callback: CallbackQuery):
             text += f' (ID: {deputy_id})'
         text += '\n\n'
 
-    await callback.message.edit_text(text, reply_markup=back_button('back_to_roles'))
+    await callback.message.edit_text(text, reply_markup=back_button('back_to_admin'))
+
 
 # ============================================================
 # 🗑 ОЧИСТИТЬ ТЕСТОВЫЕ ЗАЯВКИ
@@ -1247,6 +1248,7 @@ async def admin_edit_clan_field_value(message: Message, state: FSMContext):
         
     except Exception as e:
         await message.answer(f'❌ Ошибка: {e}. Попробуйте снова:', reply_markup=back_button('admin_edit_clan'))
+
 
 # ============================================================
 # 🔙 НАЗАД К УПРАВЛЕНИЮ РУКОВОДИТЕЛЯМИ
