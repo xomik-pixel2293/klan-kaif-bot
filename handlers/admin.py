@@ -194,7 +194,7 @@ async def process_new_user_name(message: Message, state: FSMContext):
     if text.lower() in ['пропустить', 'skip']:
         name = None
     else:
-        name = text
+        name = text  # ✅ Сохраняем полное имя
     
     data = await state.get_data()
     user_id = data.get('new_user_id')
@@ -212,9 +212,13 @@ async def process_new_user_name(message: Message, state: FSMContext):
     text_msg += f'Выберите клан для назначения {role_name}:'
     
     await state.set_state(RoleForm.waiting_clan_id)
+    
+    # ✅ ПЕРЕДАЁМ ИМЯ В КАЧЕСТВЕ ОТДЕЛЬНОГО ПАРАМЕТРА
+    # А В CALLBACK_DATA КОДИРУЕМ ИМЯ (заменяем пробелы на _)
+    encoded_name = name.replace(' ', '_') if name else ''
     await message.answer(
         text_msg,
-        reply_markup=select_clan_for_role_buttons(clans, role_type, user_id, username or '', name or '')
+        reply_markup=select_clan_for_role_buttons(clans, role_type, user_id, username or '', encoded_name)
     )
 
 
