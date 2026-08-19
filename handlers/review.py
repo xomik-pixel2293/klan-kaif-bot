@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InputMediaPhoto
+from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InputMediaPhoto, InlineKeyboardMarkup
 from aiogram.fsm.context import FSMContext
 
 from database import (
