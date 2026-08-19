@@ -179,7 +179,7 @@ def select_clan_for_role_buttons(clans, role_type, user_id, username, name):
 
 
 def select_clan_for_role_buttons_simple(clans, role_type, user_id, username):
-    """Выбор клана для назначения (новый пользователь)"""
+    """Клавиатура выбора клана (без имени в callback_data)"""
     buttons = []
     emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣', 5: '🟠'}
     for clan in clans:
@@ -187,9 +187,9 @@ def select_clan_for_role_buttons_simple(clans, role_type, user_id, username):
         emoji = emojis.get(clan_id, '🔵')
         buttons.append([InlineKeyboardButton(
             text=f"{emoji} {clan_name}",
-            callback_data=f"assign_to_clan_{role_type}_{clan_id}_{user_id}_{username}"
+            callback_data=f"assign_to_clan_{role_type}_{clan_id}_{user_id}"  # ← ТОЛЬКО ID!
         )])
-    buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='assign_from_new')])  # ← К ВВОДУ НОВОГО
+    buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='assign_from_new')])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
