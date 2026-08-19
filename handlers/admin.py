@@ -519,12 +519,12 @@ async def show_roles_list(callback: CallbackQuery):
     
     for clan in clans:
         clan_id = clan[0]
-        clan_name = clan[1] if len(clan) > 1 else 'Неизвестный'
+        clan_name = clan[1]
         emoji = emojis.get(clan_id, '🔵')
         
-        # ПРАВИЛЬНЫЙ ПОРЯДОК ПОЛЕЙ В ТАБЛИЦЕ clans:
-        # [0]=id, [1]=name, [2]=emoji, [3]=leader_id, [4]=leader_username, [5]=leader_name,
-        # [6]=deputy_id, [7]=deputy_username, [8]=deputy_name, [9]=is_active, [10]=created_at
+        # ✅ ПРАВИЛЬНЫЙ ПОРЯДОК (по вашей БД):
+        # [0]=id, [1]=name, [2]=emoji, [3]=leader_id, [4]=leader_username, 
+        # [5]=leader_name, [6]=deputy_id, [7]=deputy_username, [8]=deputy_name
         
         leader_id = clan[3] if len(clan) > 3 else None
         leader_username = clan[4] if len(clan) > 4 else 'None'
@@ -532,6 +532,16 @@ async def show_roles_list(callback: CallbackQuery):
         deputy_id = clan[6] if len(clan) > 6 else None
         deputy_username = clan[7] if len(clan) > 7 else 'None'
         deputy_name = clan[8] if len(clan) > 8 else 'None'
+        
+        # Проверка: если leader_username или leader_name содержат дату - это баг в БД
+        # Для KAIF: если leader_username == 'Лёша', а leader_name == 'KAIFLfrik' - значит поля перепутаны
+        # Исправляем на лету:
+        if leader_username and leader_username in ['Лёша', 'Катя', 'София', 'Виктория', 'Капа', 'Хома', 'Игорь', 'Саид']:
+            # Поля перепутаны - меняем местами
+            leader_username, leader_name = leader_name, leader_username
+        
+        if deputy_username and deputy_username in ['Лёша', 'Катя', 'София', 'Виктория', 'Капа', 'Хома', 'Игорь', 'Саид']:
+            deputy_username, deputy_name = deputy_name, deputy_username
         
         text += f'{emoji} {clan_name}:\n'
         text += f'   👑 Лидер: {leader_name} (@{leader_username}) (ID: {leader_id})\n'
