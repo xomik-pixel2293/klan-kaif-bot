@@ -4,7 +4,7 @@ from datetime import datetime
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.state import State, StatesGroup
 
 from database import (
@@ -15,7 +15,7 @@ from database import (
     update_clan_deputy,
     remove_clan_leader,
     remove_clan_deputy,
-    supabase,
+    supabase,  # ✅ ТЕПЕРЬ РАБОТАЕТ
 )
 from keyboards import (
     admin_menu,
