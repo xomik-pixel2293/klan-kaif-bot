@@ -311,24 +311,34 @@ async def assign_to_clan(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
     parts = callback.data.split('_')
-    role_type = parts[3]
-    clan_id = int(parts[4])
-    user_id = int(parts[5])
-    username = parts[6]
-    name = parts[7]
+    
+    try:
+        role_type = parts[3]
+        clan_id = int(parts[4])
+        user_id = int(parts[5])
+        username = parts[6] if len(parts) > 6 and parts[6] != 'None' else ''
+        
+        if len(parts) > 7 and parts[7] != 'None':
+            name = parts[7]
+        else:
+            data = await state.get_data()
+            name = data.get('pending_name') or data.get('new_name') or username or 'Пользователь'
+    except (ValueError, IndexError) as e:
+        await callback.message.answer(f'❌ Ошибка: неверный формат данных')
+        return
 
     clan = await get_clan(clan_id)
     if not clan:
         await callback.message.answer('❌ Клан не найден')
         return
 
+    # Удаляем пользователя со всех должностей (ПРАВИЛЬНЫЕ ИНДЕКСЫ!)
     clans = await get_clans()
     for c in clans:
-        c_id, c_name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, _ = c
-        if leader_id == user_id:
-            await remove_clan_leader(c_id)
-        if deputy_id == user_id:
-            await remove_clan_deputy(c_id)
+        if len(c) > 2 and c[2] == user_id:  # leader_id на [2]
+            await remove_clan_leader(c[0])
+        if len(c) > 5 and c[5] == user_id:  # deputy_id на [5]
+            await remove_clan_deputy(c[0])
 
     if role_type == 'leader':
         await update_clan_leader(clan_id, user_id, username, name)
@@ -345,7 +355,6 @@ async def assign_to_clan(callback: CallbackQuery, state: FSMContext):
 
     await state.clear()
     await callback.message.answer('👥 Управление руководителями\n\nВыберите действие:', reply_markup=manage_roles_menu())
-
 
 @router.callback_query(F.data == 'role_remove_leader')
 async def role_remove_leader(callback: CallbackQuery):
