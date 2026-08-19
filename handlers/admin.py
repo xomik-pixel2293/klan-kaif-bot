@@ -107,27 +107,31 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
     role_name = 'лидером' if role_type == 'leader' else 'замом'
 
     clans = await get_clans()
+    
+    # 🔍 ОТЛАДКА: выводим сырые данные
+    print(f"🔍 ПОЛУЧЕНЫ КЛАНЫ: {clans}")
+    
     leaders = []
     for clan in clans:
+        print(f"🔍 КЛАН: {clan}")
         if len(clan) < 9:
+            print(f"⚠️ Клан {clan[1] if len(clan) > 1 else 'unknown'} имеет {len(clan)} полей, пропускаем")
             continue
             
         clan_id = clan[0]
         clan_name = clan[1]
         
-        # ПРАВИЛЬНЫЕ ИНДЕКСЫ ДЛЯ ВАШЕЙ БД:
-        # [0]=id, [1]=name, [2]=emoji, [3]=leader_id, [4]=leader_username,
-        # [5]=leader_name, [6]=deputy_id, [7]=deputy_username, [8]=deputy_name
-        
-        leader_id = clan[3]
+        leader_id = clan[3] if len(clan) > 3 else None
         leader_username = clan[4] if len(clan) > 4 else ''
         leader_name = clan[5] if len(clan) > 5 else '❌'
         deputy_id = clan[6] if len(clan) > 6 else None
         deputy_username = clan[7] if len(clan) > 7 else ''
         deputy_name = clan[8] if len(clan) > 8 else '❌'
         
-        # ✅ ПРОВЕРКА: leader_id должен быть числом!
-        if leader_id and isinstance(leader_id, int):
+        print(f"🔍 leader_id={leader_id}, leader_username={leader_username}, leader_name={leader_name}")
+        print(f"🔍 deputy_id={deputy_id}, deputy_username={deputy_username}, deputy_name={deputy_name}")
+        
+        if leader_id:
             leaders.append({
                 'id': leader_id,
                 'username': leader_username or '',
@@ -136,7 +140,7 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
                 'clan_id': clan_id,
                 'role': 'Лидер'
             })
-        if deputy_id and isinstance(deputy_id, int):
+        if deputy_id:
             leaders.append({
                 'id': deputy_id,
                 'username': deputy_username or '',
@@ -146,8 +150,11 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
                 'role': 'Зам'
             })
 
+    print(f"🔍 СОБРАНО РУКОВОДИТЕЛЕЙ: {leaders}")
+
     if not leaders:
-        await callback.message.edit_text(
+        # ⚠️ ВАЖНО: используем answer, а не edit_text, чтобы не было ошибки "message is not modified"
+        await callback.message.answer(
             '❌ Нет существующих руководителей.\n'
             'Используйте "Ввести нового пользователя".',
             reply_markup=assign_choice_menu()
