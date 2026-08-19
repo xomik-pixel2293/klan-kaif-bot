@@ -19,7 +19,7 @@ CLANS_DATA = [
      'deputy_id': 1622791763, 'deputy_username': 'Xoma9991', 'deputy_name': 'Xoma'},
     {'id': 4, 'name': 'KAIF ESPORTS', 'emoji': '🟣', 'leader_id': 643813214, 'leader_username': 'vi_sergeeevna',
      'leader_name': 'Виктория', 'deputy_id': 5346986362, 'deputy_username': 'DiamirManager', 'deputy_name': 'Саид'},
-    {'id': 5, 'name': 'KAIF TDM', 'emoji': '🟠', 'leader_id': 6409373909, 'leader_username': 'Kapa19_07', 'leader_name': 'Капа',
+    {'id': 5, 'name': 'TDM', 'emoji': '🟠', 'leader_id': 6409373909, 'leader_username': 'Kapa19_07', 'leader_name': 'Капа',
      'deputy_id': None, 'deputy_username': None, 'deputy_name': None},
 ]
 

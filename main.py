@@ -8,7 +8,7 @@ from aiogram.client.session.aiohttp import AiohttpSession
 from flask import Flask
 from config import BOT_TOKEN
 from database import init_db
-from handlers import router
+from handlers import router  # ← ИМПОРТ ОДИН РАЗ
 
 logging.basicConfig(level=logging.INFO)
 
@@ -48,7 +48,7 @@ async def main():
     await set_commands(bot)
 
     # Запуск планировщика напоминаний
-    from handlers import start_scheduler
+    from handlers.scheduler import start_scheduler  # ← ПРАВИЛЬНЫЙ ИМПОРТ
     await start_scheduler(bot)
 
     dp = Dispatcher()
