@@ -1263,3 +1263,80 @@ async def back_to_roles(callback: CallbackQuery, state: FSMContext):
         'Здесь вы можете назначить или удалить лидера/зама для любого клана.',
         reply_markup=manage_roles_menu()
     )
+
+
+# ============================================================
+# 🔙 НАЗАД К ВЫБОРУ СПОСОБА НАЗНАЧЕНИЯ
+# ============================================================
+
+@router.callback_query(F.data == 'select_existing_choice')
+async def select_existing_choice(callback: CallbackQuery, state: FSMContext):
+    """Назад к выбору способа назначения (из выбора клана)"""
+    if callback.from_user.id not in ADMIN_IDS:
+        await callback.answer('⛔ Нет прав')
+        return
+    await callback.answer()
+    
+    data = await state.get_data()
+    role_type = data.get('role_type', 'leader')
+    
+    if role_type == 'leader':
+        await callback.message.edit_text(
+            '👥 Назначение лидера\n\n'
+            'Выберите действие:',
+            reply_markup=assign_choice_menu()
+        )
+    else:
+        await callback.message.edit_text(
+            '👥 Назначение зама\n\n'
+            'Выберите действие:',
+            reply_markup=assign_choice_menu()
+        )
+
+
+# ============================================================
+# 🔙 НАЗАД К ВЫБОРУ СПОСОБА НАЗНАЧЕНИЯ (ИЗ СПИСКА РУКОВОДИТЕЛЕЙ)
+# ============================================================
+
+@router.callback_query(F.data == 'assign_choice_menu')
+async def assign_choice_menu_back(callback: CallbackQuery, state: FSMContext):
+    """Назад к выбору способа назначения (из списка руководителей)"""
+    if callback.from_user.id not in ADMIN_IDS:
+        await callback.answer('⛔ Нет прав')
+        return
+    await callback.answer()
+    
+    data = await state.get_data()
+    role_type = data.get('role_type', 'leader')
+    
+    if role_type == 'leader':
+        await callback.message.edit_text(
+            '👥 Назначение лидера\n\n'
+            'Выберите действие:',
+            reply_markup=assign_choice_menu()
+        )
+    else:
+        await callback.message.edit_text(
+            '👥 Назначение зама\n\n'
+            'Выберите действие:',
+            reply_markup=assign_choice_menu()
+        )
+
+
+# ============================================================
+# 🔙 НАЗАД К УПРАВЛЕНИЮ РУКОВОДИТЕЛЯМИ (ИЗ УДАЛЕНИЯ)
+# ============================================================
+
+@router.callback_query(F.data == 'back_to_manage_roles')
+async def back_to_manage_roles(callback: CallbackQuery, state: FSMContext):
+    """Назад в управление руководителями"""
+    if callback.from_user.id not in ADMIN_IDS:
+        await callback.answer('⛔ Нет прав')
+        return
+    await callback.answer()
+    await state.clear()
+    await callback.message.edit_text(
+        '👥 Управление руководителями\n\n'
+        'Здесь вы можете назначить или удалить лидера/зама для любого клана.',
+        reply_markup=manage_roles_menu()
+    )
