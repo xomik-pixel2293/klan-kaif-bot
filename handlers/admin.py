@@ -15,7 +15,7 @@ from database import (
     update_clan_deputy,
     remove_clan_leader,
     remove_clan_deputy,
-    supabase,  # ✅ ТЕПЕРЬ РАБОТАЕТ
+    supabase,
 )
 from keyboards import (
     admin_menu,
@@ -46,7 +46,7 @@ class RoleForm(StatesGroup):
 
 
 # ============================================================
-# 👤 ПРОЦЕСС НАЗНАЧЕНИЯ НОВОГО ПОЛЬЗОВАТЕЛЯ (🔧 ИЗМЕНЕНО)
+# 👤 ПРОЦЕСС НАЗНАЧЕНИЯ НОВОГО ПОЛЬЗОВАТЕЛЯ
 # ============================================================
 
 @router.message(RoleForm.waiting_name)
@@ -65,7 +65,7 @@ async def process_new_user_name(message: Message, state: FSMContext):
     role_name = 'лидером' if role_type == 'leader' else 'замом'
     
     await state.update_data(new_name=name)
-    await state.update_data(pending_name=name)  # ✅ ДОБАВЛЕНО: сохраняем имя в state
+    await state.update_data(pending_name=name)
     
     clans = await get_clans()
     text_msg = f'👤 Новый пользователь:\n'
@@ -76,7 +76,6 @@ async def process_new_user_name(message: Message, state: FSMContext):
     
     await state.set_state(RoleForm.waiting_clan_id)
     
-    # ✅ ИЗМЕНЕНО: используем новую функцию без имени в callback
     await message.answer(
         text_msg,
         reply_markup=select_clan_for_role_buttons_simple(clans, role_type, user_id, username or '')
@@ -84,7 +83,7 @@ async def process_new_user_name(message: Message, state: FSMContext):
 
 
 # ============================================================
-# 👤 НАЗНАЧЕНИЕ ПОЛЬЗОВАТЕЛЯ (🆕 НОВАЯ ФУНКЦИЯ)
+# 👤 НАЗНАЧЕНИЕ ПОЛЬЗОВАТЕЛЯ (НОВАЯ ВЕРСИЯ)
 # ============================================================
 
 @router.callback_query(F.data.startswith('assign_to_clan_simple_'))
@@ -137,21 +136,16 @@ async def assign_to_clan_simple(callback: CallbackQuery, state: FSMContext):
     
     clans = await get_clans()
     for c in clans:
-        if len(c) >= 11:
-            c_id = c[0]
-            leader_id_field = c[3] if len(c) > 3 else None
-            deputy_id_field = c[6] if len(c) > 6 else None
-        else:
-            c_id = c[0]
-            leader_id_field = c[2] if len(c) > 2 else None
-            deputy_id_field = c[5] if len(c) > 5 else None
+        # ✅ ПРАВИЛЬНЫЙ ПОРЯДОК:
+        # [0]=id, [1]=name, [2]=leader_id, [3]=leader_username, 
+        # [4]=leader_name, [5]=deputy_id, [6]=deputy_username, [7]=deputy_name
             
-        if leader_id_field == user_id:
-            await remove_clan_leader(c_id)
-            print(f"🔍 Удалён лидер в клане {c_id}")
-        if deputy_id_field == user_id:
-            await remove_clan_deputy(c_id)
-            print(f"🔍 Удалён зам в клане {c_id}")
+        if c[2] == user_id:  # leader_id на [2]
+            await remove_clan_leader(c[0])
+            print(f"🔍 Удалён лидер в клане {c[0]}")
+        if c[5] == user_id:  # deputy_id на [5]
+            await remove_clan_deputy(c[0])
+            print(f"🔍 Удалён зам в клане {c[0]}")
 
     if role_type == 'leader':
         await update_clan_leader(clan_id, user_id, username, name)
@@ -174,7 +168,7 @@ async def assign_to_clan_simple(callback: CallbackQuery, state: FSMContext):
 
 
 # ============================================================
-# ⚠️ СТАРАЯ ФУНКЦИЯ - ЗАКОММЕНТИРОВАНА (чтобы не мешала)
+# ⚠️ СТАРАЯ ФУНКЦИЯ - ЗАКОММЕНТИРОВАНА
 # ============================================================
 
 # @router.callback_query(F.data.startswith('assign_to_clan_'))
@@ -299,32 +293,35 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
     clans = await get_clans()
     leaders = []
     for c in clans:
-        if len(c) >= 11:
-            leader_id = c[3] if len(c) > 3 else None
-            leader_name = c[4] if len(c) > 4 else None
-            leader_username = c[5] if len(c) > 5 else None
-            clan_name = c[1]
-            if leader_id:
-                leaders.append({
-                    'id': leader_id,
-                    'name': leader_name or '❌',
-                    'username': leader_username or '',
-                    'role': 'Лидер',
-                    'clan': clan_name,
-                    'clan_id': c[0]
-                })
-            deputy_id = c[6] if len(c) > 6 else None
-            deputy_name = c[7] if len(c) > 7 else None
-            deputy_username = c[8] if len(c) > 8 else None
-            if deputy_id:
-                leaders.append({
-                    'id': deputy_id,
-                    'name': deputy_name or '❌',
-                    'username': deputy_username or '',
-                    'role': 'Зам',
-                    'clan': clan_name,
-                    'clan_id': c[0]
-                })
+        # ✅ ПРАВИЛЬНЫЙ ПОРЯДОК:
+        # [0]=id, [1]=name, [2]=leader_id, [3]=leader_username, 
+        # [4]=leader_name, [5]=deputy_id, [6]=deputy_username, [7]=deputy_name
+        
+        leader_id = c[2] if len(c) > 2 else None
+        leader_name = c[4] if len(c) > 4 else None
+        leader_username = c[3] if len(c) > 3 else None
+        clan_name = c[1]
+        if leader_id:
+            leaders.append({
+                'id': leader_id,
+                'name': leader_name or '❌',
+                'username': leader_username or '',
+                'role': 'Лидер',
+                'clan': clan_name,
+                'clan_id': c[0]
+            })
+        deputy_id = c[5] if len(c) > 5 else None
+        deputy_name = c[7] if len(c) > 7 else None
+        deputy_username = c[6] if len(c) > 6 else None
+        if deputy_id:
+            leaders.append({
+                'id': deputy_id,
+                'name': deputy_name or '❌',
+                'username': deputy_username or '',
+                'role': 'Зам',
+                'clan': clan_name,
+                'clan_id': c[0]
+            })
     
     if not leaders:
         await callback.message.edit_text(
@@ -359,15 +356,18 @@ async def select_existing_leader(callback: CallbackQuery, state: FSMContext):
     username = ''
     name = ''
     for c in clans:
-        if len(c) >= 11:
-            if c[3] == user_id:
-                username = c[5] or ''
-                name = c[4] or 'Пользователь'
-                break
-            if c[6] == user_id:
-                username = c[8] or ''
-                name = c[7] or 'Пользователь'
-                break
+        # ✅ ПРАВИЛЬНЫЙ ПОРЯДОК:
+        # [0]=id, [1]=name, [2]=leader_id, [3]=leader_username, 
+        # [4]=leader_name, [5]=deputy_id, [6]=deputy_username, [7]=deputy_name
+        
+        if c[2] == user_id:  # leader_id на [2]
+            username = c[3] or ''  # leader_username на [3]
+            name = c[4] or 'Пользователь'  # leader_name на [4]
+            break
+        if c[5] == user_id:  # deputy_id на [5]
+            username = c[6] or ''  # deputy_username на [6]
+            name = c[7] or 'Пользователь'  # deputy_name на [7]
+            break
     
     if not name:
         name = 'Пользователь'
@@ -405,16 +405,19 @@ async def role_remove_leader(callback: CallbackQuery):
     buttons = []
     
     for c in clans:
-        if len(c) >= 11:
-            leader_id = c[3] if len(c) > 3 else None
-            leader_name = c[4] if len(c) > 4 else None
-            clan_name = c[1]
-            if leader_id:
-                text += f'👑 {leader_name} (@{c[5]}) - {clan_name}\n'
-                buttons.append([InlineKeyboardButton(
-                    text=f'🗑 {leader_name} - {clan_name}',
-                    callback_data=f'remove_leader_{c[0]}_{leader_id}'
-                )])
+        # ✅ ПРАВИЛЬНЫЙ ПОРЯДОК:
+        # [0]=id, [1]=name, [2]=leader_id, [3]=leader_username, [4]=leader_name
+        
+        leader_id = c[2] if len(c) > 2 else None
+        leader_name = c[4] if len(c) > 4 else None
+        leader_username = c[3] if len(c) > 3 else None
+        clan_name = c[1]
+        if leader_id:
+            text += f'👑 {leader_name} (@{leader_username}) - {clan_name}\n'
+            buttons.append([InlineKeyboardButton(
+                text=f'🗑 {leader_name} - {clan_name}',
+                callback_data=f'remove_leader_{c[0]}_{leader_id}'
+            )])
     
     if not buttons:
         await callback.message.edit_text('❌ Нет лидеров для удаления', reply_markup=back_button('back_to_admin'))
@@ -440,16 +443,19 @@ async def role_remove_deputy(callback: CallbackQuery):
     buttons = []
     
     for c in clans:
-        if len(c) >= 11:
-            deputy_id = c[6] if len(c) > 6 else None
-            deputy_name = c[7] if len(c) > 7 else None
-            clan_name = c[1]
-            if deputy_id:
-                text += f'👤 {deputy_name} (@{c[8]}) - {clan_name}\n'
-                buttons.append([InlineKeyboardButton(
-                    text=f'🗑 {deputy_name} - {clan_name}',
-                    callback_data=f'remove_deputy_{c[0]}_{deputy_id}'
-                )])
+        # ✅ ПРАВИЛЬНЫЙ ПОРЯДОК:
+        # [0]=id, [1]=name, [5]=deputy_id, [6]=deputy_username, [7]=deputy_name
+        
+        deputy_id = c[5] if len(c) > 5 else None
+        deputy_name = c[7] if len(c) > 7 else None
+        deputy_username = c[6] if len(c) > 6 else None
+        clan_name = c[1]
+        if deputy_id:
+            text += f'👤 {deputy_name} (@{deputy_username}) - {clan_name}\n'
+            buttons.append([InlineKeyboardButton(
+                text=f'🗑 {deputy_name} - {clan_name}',
+                callback_data=f'remove_deputy_{c[0]}_{deputy_id}'
+            )])
     
     if not buttons:
         await callback.message.edit_text('❌ Нет замов для удаления', reply_markup=back_button('back_to_admin'))
@@ -500,9 +506,13 @@ async def remove_deputy_callback(callback: CallbackQuery):
     )
 
 
+# ============================================================
+# 📋 СПИСОК РУКОВОДИТЕЛЕЙ (ИСПРАВЛЕН)
+# ============================================================
+
 @router.callback_query(F.data == 'role_list')
 async def show_roles_list(callback: CallbackQuery):
-    """Показать список всех руководителей (ОТЛАДОЧНАЯ ВЕРСИЯ)"""
+    """Показать список всех руководителей"""
     if callback.from_user.id not in ADMIN_IDS:
         await callback.answer('⛔ Нет прав')
         return
@@ -514,23 +524,34 @@ async def show_roles_list(callback: CallbackQuery):
         await callback.message.answer('❌ Кланы не найдены')
         return
     
-    # 🔍 ВЫВОДИМ СЫРЫЕ ДАННЫЕ
-    debug_text = "🔍 СЫРЫЕ ДАННЫЕ ИЗ БД:\n\n"
+    text = '👥 ТЕКУЩИЕ РУКОВОДИТЕЛИ:\n\n'
+    emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣', 5: '🟠'}
     
-    for i, clan in enumerate(clans):
-        debug_text += f"Клан {i+1}: {clan[1]}\n"
-        debug_text += f"  Все поля: {clan}\n"
-        debug_text += f"  [0] id: {clan[0]}\n"
-        debug_text += f"  [1] name: {clan[1]}\n"
-        debug_text += f"  [2] emoji: {clan[2] if len(clan) > 2 else 'None'}\n"
-        debug_text += f"  [3] leader_id: {clan[3] if len(clan) > 3 else 'None'}\n"
-        debug_text += f"  [4] leader_username: {clan[4] if len(clan) > 4 else 'None'}\n"
-        debug_text += f"  [5] leader_name: {clan[5] if len(clan) > 5 else 'None'}\n"
-        debug_text += f"  [6] deputy_id: {clan[6] if len(clan) > 6 else 'None'}\n"
-        debug_text += f"  [7] deputy_username: {clan[7] if len(clan) > 7 else 'None'}\n"
-        debug_text += f"  [8] deputy_name: {clan[8] if len(clan) > 8 else 'None'}\n\n"
+    for clan in clans:
+        clan_id = clan[0]
+        clan_name = clan[1]
+        emoji = emojis.get(clan_id, '🔵')
+        
+        # ✅ ПРАВИЛЬНЫЙ ПОРЯДОК (из сырых данных):
+        # [0]=id, [1]=name, [2]=leader_id, [3]=leader_username, 
+        # [4]=leader_name, [5]=deputy_id, [6]=deputy_username, 
+        # [7]=deputy_name, [8]=created_at, [9]=is_active, [10]=emoji
+        
+        leader_id = clan[2] if len(clan) > 2 else 'None'
+        leader_username = clan[3] if len(clan) > 3 else 'None'
+        leader_name = clan[4] if len(clan) > 4 else 'None'
+        deputy_id = clan[5] if len(clan) > 5 else 'None'
+        deputy_username = clan[6] if len(clan) > 6 else 'None'
+        deputy_name = clan[7] if len(clan) > 7 else 'None'
+        
+        text += f'{emoji} {clan_name}:\n'
+        text += f'   👑 Лидер: {leader_name} (@{leader_username}) (ID: {leader_id})\n'
+        text += f'   👤 Зам: {deputy_name} (@{deputy_username}) (ID: {deputy_id})\n\n'
     
-    await callback.message.edit_text(debug_text)
+    await callback.message.edit_text(
+        text,
+        reply_markup=back_button('back_to_admin')
+    )
 
 
 # ============================================================
