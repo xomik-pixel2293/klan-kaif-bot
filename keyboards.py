@@ -170,9 +170,8 @@ def select_clan_for_role_buttons(clans, role_type, user_id, username, name):
             text=f"{emoji} {clan_name}",
             callback_data=f"assign_to_clan_{role_type}_{clan_id}_{user_id}_{username}_{name}"
         )])
-    buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='select_existing_choice')])  # ← НАЗАД К ВЫБОРУ
+    buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_assign_choice')])  
     return InlineKeyboardMarkup(inline_keyboard=buttons)
-
 
 def clan_choice_for_roles():
     return InlineKeyboardMarkup(inline_keyboard=[
