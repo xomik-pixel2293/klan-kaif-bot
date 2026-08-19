@@ -522,7 +522,10 @@ async def show_roles_list(callback: CallbackQuery):
         clan_name = clan[1] if len(clan) > 1 else 'Неизвестный'
         emoji = emojis.get(clan_id, '🔵')
         
-        # ПРАВИЛЬНЫЙ ПОРЯДОК ПОЛЕЙ:
+        # ПРАВИЛЬНЫЙ ПОРЯДОК ПОЛЕЙ В ТАБЛИЦЕ clans:
+        # [0]=id, [1]=name, [2]=emoji, [3]=leader_id, [4]=leader_username, [5]=leader_name,
+        # [6]=deputy_id, [7]=deputy_username, [8]=deputy_name, [9]=is_active, [10]=created_at
+        
         leader_id = clan[3] if len(clan) > 3 else None
         leader_username = clan[4] if len(clan) > 4 else 'None'
         leader_name = clan[5] if len(clan) > 5 else 'None'
@@ -538,6 +541,8 @@ async def show_roles_list(callback: CallbackQuery):
         text,
         reply_markup=back_button('back_to_admin')
     )
+
+
 # ============================================================
 # 🔄 УПРАВЛЕНИЕ СТАТУСОМ КЛАНОВ
 # ============================================================
