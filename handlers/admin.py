@@ -289,41 +289,64 @@ async def select_existing_leader(callback: CallbackQuery, state: FSMContext):
     role_type = data.get('role_type', 'leader')
     role_name = 'лидером' if role_type == 'leader' else 'замом'
 
+    # ✅ ИЩЕМ ПОЛЬЗОВАТЕЛЯ В ТАБЛИЦЕ КЛАНОВ
     clans = await get_clans()
     user_info = None
+    
     for clan in clans:
-        if len(clan) >= 11:
-            clan_id_db = clan[0]
-            name = clan[1]
-            leader_id = clan[3] if len(clan) > 3 else None
-            leader_username = clan[4] if len(clan) > 4 else None
-            leader_name = clan[5] if len(clan) > 5 else None
-            deputy_id = clan[6] if len(clan) > 6 else None
-            deputy_username = clan[7] if len(clan) > 7 else None
-            deputy_name = clan[8] if len(clan) > 8 else None
+        # clan: (id, name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, created_at)
+        if len(clan) >= 9:
+            clan_leader_id = clan[2] if len(clan) > 2 else None
+            clan_leader_username = clan[3] if len(clan) > 3 else None
+            clan_leader_name = clan[4] if len(clan) > 4 else None
+            clan_deputy_id = clan[5] if len(clan) > 5 else None
+            clan_deputy_username = clan[6] if len(clan) > 6 else None
+            clan_deputy_name = clan[7] if len(clan) > 7 else None
         else:
-            clan_id_db = clan[0]
-            name = clan[1]
-            leader_id = clan[2] if len(clan) > 2 else None
-            leader_username = clan[3] if len(clan) > 3 else None
-            leader_name = clan[4] if len(clan) > 4 else None
-            deputy_id = clan[5] if len(clan) > 5 else None
-            deputy_username = clan[6] if len(clan) > 6 else None
-            deputy_name = clan[7] if len(clan) > 7 else None
+            clan_leader_id = clan[2] if len(clan) > 2 else None
+            clan_leader_username = clan[3] if len(clan) > 3 else None
+            clan_leader_name = clan[4] if len(clan) > 4 else None
+            clan_deputy_id = clan[5] if len(clan) > 5 else None
+            clan_deputy_username = clan[6] if len(clan) > 6 else None
+            clan_deputy_name = clan[7] if len(clan) > 7 else None
             
-        if leader_id == user_id:
-            user_info = {'id': leader_id, 'username': leader_username, 'name': leader_name}
+        if clan_leader_id == user_id:
+            user_info = {
+                'id': user_id,
+                'username': clan_leader_username or str(user_id),
+                'name': clan_leader_name or 'Пользователь'
+            }
             break
-        if deputy_id == user_id:
-            user_info = {'id': deputy_id, 'username': deputy_username, 'name': deputy_name}
+        if clan_deputy_id == user_id:
+            user_info = {
+                'id': user_id,
+                'username': clan_deputy_username or str(user_id),
+                'name': clan_deputy_name or 'Пользователь'
+            }
             break
-
+    
+    # ✅ ЕСЛИ НЕ НАШЛИ — ИЩЕМ В ЗАЯВКАХ
+    if not user_info:
+        app = await get_user_applications(user_id)
+        if app:
+            # Берём первую заявку пользователя
+            first_app = app[0]
+            answers = json.loads(first_app[4]) if len(first_app) > 4 else {}
+            user_info = {
+                'id': user_id,
+                'username': first_app[2] or str(user_id),
+                'name': answers.get('name', 'Пользователь')
+            }
+    
     if not user_info:
         await callback.message.answer('❌ Пользователь не найден')
         return
 
-    await state.update_data(selected_user_id=user_id, selected_username=user_info['username'],
-                            selected_name=user_info['name'])
+    await state.update_data(
+        selected_user_id=user_id,
+        selected_username=user_info['username'],
+        selected_name=user_info['name']
+    )
 
     await callback.message.edit_text(
         f'👤 Выбран: {user_info["name"]} (@{user_info["username"]})\n\n'
