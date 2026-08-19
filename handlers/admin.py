@@ -109,12 +109,24 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
     clans = await get_clans()
     leaders = []
     for clan in clans:
-        clan_id, name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, _ = clan
+        # ПРАВИЛЬНЫЙ ПОРЯДОК ПОЛЕЙ:
+        # [0]=id, [1]=name, [2]=emoji, [3]=leader_id, [4]=leader_username,
+        # [5]=leader_name, [6]=deputy_id, [7]=deputy_username, [8]=deputy_name
+        
+        clan_id = clan[0] if len(clan) > 0 else None
+        name = clan[1] if len(clan) > 1 else 'Неизвестный'
+        leader_id = clan[3] if len(clan) > 3 else None
+        leader_username = clan[4] if len(clan) > 4 else ''
+        leader_name = clan[5] if len(clan) > 5 else '❌'
+        deputy_id = clan[6] if len(clan) > 6 else None
+        deputy_username = clan[7] if len(clan) > 7 else ''
+        deputy_name = clan[8] if len(clan) > 8 else '❌'
+        
         if leader_id:
             leaders.append({
                 'id': leader_id,
-                'username': leader_username,
-                'name': leader_name,
+                'username': leader_username or '',
+                'name': leader_name or '❌',
                 'clan': name,
                 'clan_id': clan_id,
                 'role': 'Лидер'
@@ -122,8 +134,8 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
         if deputy_id:
             leaders.append({
                 'id': deputy_id,
-                'username': deputy_username,
-                'name': deputy_name,
+                'username': deputy_username or '',
+                'name': deputy_name or '❌',
                 'clan': name,
                 'clan_id': clan_id,
                 'role': 'Зам'
