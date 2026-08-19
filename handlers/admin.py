@@ -72,7 +72,25 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
     clans = await get_clans()
     leaders = []
     for clan in clans:
-        clan_id, name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, _ = clan
+        if len(clan) >= 11:
+            clan_id = clan[0]
+            name = clan[1]
+            leader_id = clan[3] if len(clan) > 3 else None
+            leader_username = clan[4] if len(clan) > 4 else None
+            leader_name = clan[5] if len(clan) > 5 else None
+            deputy_id = clan[6] if len(clan) > 6 else None
+            deputy_username = clan[7] if len(clan) > 7 else None
+            deputy_name = clan[8] if len(clan) > 8 else None
+        else:
+            clan_id = clan[0]
+            name = clan[1]
+            leader_id = clan[2] if len(clan) > 2 else None
+            leader_username = clan[3] if len(clan) > 3 else None
+            leader_name = clan[4] if len(clan) > 4 else None
+            deputy_id = clan[5] if len(clan) > 5 else None
+            deputy_username = clan[6] if len(clan) > 6 else None
+            deputy_name = clan[7] if len(clan) > 7 else None
+            
         if leader_id:
             leaders.append({
                 'id': leader_id,
@@ -204,7 +222,7 @@ async def process_new_user_name(message: Message, state: FSMContext):
 @router.callback_query(F.data.startswith('assign_to_clan_'))
 async def assign_to_clan(callback: CallbackQuery, state: FSMContext):
     """Назначить пользователя в клан"""
-    print(f"🔍 НАЖАТА КНОПКА: {callback.data}")  # ← ДЛЯ ОТЛАДКИ
+    print(f"🔍 НАЖАТА КНОПКА: {callback.data}")
     if callback.from_user.id not in ADMIN_IDS:
         await callback.answer('⛔ Нет прав')
         return
@@ -222,13 +240,22 @@ async def assign_to_clan(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer('❌ Клан не найден')
         return
 
-    # Удаляем пользователя с других должностей
+    # ✅ ПРАВИЛЬНАЯ РАСПАКОВКА (учитываем emoji и is_active)
     clans = await get_clans()
     for c in clans:
-        c_id, c_name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, _ = c
-        if leader_id == user_id:
+        # clan: (id, name, emoji, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, is_active, created_at)
+        if len(c) >= 11:
+            c_id = c[0]
+            leader_id_field = c[3] if len(c) > 3 else None
+            deputy_id_field = c[6] if len(c) > 6 else None
+        else:
+            c_id = c[0]
+            leader_id_field = c[2] if len(c) > 2 else None
+            deputy_id_field = c[5] if len(c) > 5 else None
+            
+        if leader_id_field == user_id:
             await remove_clan_leader(c_id)
-        if deputy_id == user_id:
+        if deputy_id_field == user_id:
             await remove_clan_deputy(c_id)
 
     if role_type == 'leader':
@@ -266,7 +293,25 @@ async def select_existing_leader(callback: CallbackQuery, state: FSMContext):
     clans = await get_clans()
     user_info = None
     for clan in clans:
-        clan_id_db, name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, _ = clan
+        if len(clan) >= 11:
+            clan_id_db = clan[0]
+            name = clan[1]
+            leader_id = clan[3] if len(clan) > 3 else None
+            leader_username = clan[4] if len(clan) > 4 else None
+            leader_name = clan[5] if len(clan) > 5 else None
+            deputy_id = clan[6] if len(clan) > 6 else None
+            deputy_username = clan[7] if len(clan) > 7 else None
+            deputy_name = clan[8] if len(clan) > 8 else None
+        else:
+            clan_id_db = clan[0]
+            name = clan[1]
+            leader_id = clan[2] if len(clan) > 2 else None
+            leader_username = clan[3] if len(clan) > 3 else None
+            leader_name = clan[4] if len(clan) > 4 else None
+            deputy_id = clan[5] if len(clan) > 5 else None
+            deputy_username = clan[6] if len(clan) > 6 else None
+            deputy_name = clan[7] if len(clan) > 7 else None
+            
         if leader_id == user_id:
             user_info = {'id': leader_id, 'username': leader_username, 'name': leader_name}
             break
@@ -338,10 +383,18 @@ async def role_confirm_remove(callback: CallbackQuery):
     clan_id = int(callback.data.split('_')[3])
     clan = await get_clan(clan_id)
 
-    if len(clan) > 3 and clan[3]:
+    # ✅ ПРАВИЛЬНАЯ РАСПАКОВКА
+    if len(clan) >= 11:
+        leader_id = clan[3] if len(clan) > 3 else None
+        deputy_id = clan[6] if len(clan) > 6 else None
+    else:
+        leader_id = clan[2] if len(clan) > 2 else None
+        deputy_id = clan[5] if len(clan) > 5 else None
+
+    if leader_id:
         await remove_clan_leader(clan_id)
         await callback.message.edit_text(f'✅ Лидер удалён из клана {clan[1]}')
-    elif len(clan) > 6 and clan[6]:
+    elif deputy_id:
         await remove_clan_deputy(clan_id)
         await callback.message.edit_text(f'✅ Зам удалён из клана {clan[1]}')
     else:
@@ -362,7 +415,7 @@ async def role_list(callback: CallbackQuery):
     emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣', 5: '🟠'}
 
     for clan in clans:
-        if len(clan) >= 9:
+        if len(clan) >= 11:
             clan_id = clan[0]
             name = clan[1]
             leader_name = clan[5] if len(clan) > 5 else None
@@ -372,7 +425,14 @@ async def role_list(callback: CallbackQuery):
             deputy_username = clan[7] if len(clan) > 7 else None
             deputy_id = clan[6] if len(clan) > 6 else None
         else:
-            continue
+            clan_id = clan[0]
+            name = clan[1]
+            leader_name = clan[4] if len(clan) > 4 else None
+            leader_username = clan[3] if len(clan) > 3 else None
+            leader_id = clan[2] if len(clan) > 2 else None
+            deputy_name = clan[7] if len(clan) > 7 else None
+            deputy_username = clan[6] if len(clan) > 6 else None
+            deputy_id = clan[5] if len(clan) > 5 else None
             
         emoji = emojis.get(clan_id, '🔵')
 
@@ -611,16 +671,21 @@ async def admin_export(callback: CallbackQuery):
         all_leaders = {}
         clans = await get_clans()
         for clan in clans:
-            if len(clan) > 3:
+            if len(clan) >= 11:
+                leader_id = clan[3] if len(clan) > 3 else None
+                leader_username = clan[4] if len(clan) > 4 else None
+                deputy_id = clan[6] if len(clan) > 6 else None
+                deputy_username = clan[7] if len(clan) > 7 else None
+            else:
                 leader_id = clan[2] if len(clan) > 2 else None
                 leader_username = clan[3] if len(clan) > 3 else None
                 deputy_id = clan[5] if len(clan) > 5 else None
                 deputy_username = clan[6] if len(clan) > 6 else None
                 
-                if leader_id:
-                    all_leaders[leader_id] = leader_username or str(leader_id)
-                if deputy_id:
-                    all_leaders[deputy_id] = deputy_username or str(deputy_id)
+            if leader_id:
+                all_leaders[leader_id] = leader_username or str(leader_id)
+            if deputy_id:
+                all_leaders[deputy_id] = deputy_username or str(deputy_id)
 
         for app in apps:
             try:
