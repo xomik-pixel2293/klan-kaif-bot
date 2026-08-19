@@ -1348,19 +1348,13 @@ async def select_existing_choice(callback: CallbackQuery, state: FSMContext):
     
     data = await state.get_data()
     role_type = data.get('role_type', 'leader')
+    role_name = 'лидер' if role_type == 'leader' else 'зам'
     
-    if role_type == 'leader':
-        await callback.message.edit_text(
-            '👥 Назначение лидера\n\n'
-            'Выберите действие:',
-            reply_markup=assign_choice_menu()
-        )
-    else:
-        await callback.message.edit_text(
-            '👥 Назначение зама\n\n'
-            'Выберите действие:',
-            reply_markup=assign_choice_menu()
-        )
+    await callback.message.edit_text(
+        f'👥 Назначение {role_name}а\n\n'
+        'Выберите действие:',
+        reply_markup=assign_choice_menu()
+    )
 
 
 # ============================================================
