@@ -11,6 +11,7 @@ from aiogram.client.session.aiohttp import AiohttpSession
 from flask import Flask
 from config import BOT_TOKEN, ADMIN_IDS
 from database import init_db, get_admin_ids
+from handlers import router
 
 logging.basicConfig(level=logging.INFO)
 
