@@ -1,7 +1,7 @@
 import json
+import os
 import asyncpg
 import aiosqlite
-import os
 from datetime import datetime
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
@@ -9,8 +9,9 @@ from aiogram.fsm.context import FSMContext
 
 from config import ADMIN_IDS
 from database import *
+from database import DB_PATH
 from keyboards import *
-from .start import RoleForm, ClanManagementForm
+from .start import RoleForm, ClanManagementForm, AdminForm
 
 router = Router()
 
@@ -114,10 +115,6 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
     for clan in clans:
         if len(clan) < 9:
             continue
-        
-        # [0]=id, [1]=name, [2]=leader_id, [3]=leader_username,
-        # [4]=leader_name, [5]=deputy_id, [6]=deputy_username,
-        # [7]=deputy_name, [8]=created_at, [9]=is_active, [10]=emoji
         
         clan_id = clan[0]
         clan_name = clan[1]
@@ -263,9 +260,6 @@ async def select_existing_leader(callback: CallbackQuery, state: FSMContext):
     for clan in clans:
         if len(clan) < 9:
             continue
-        # [0]=id, [1]=name, [2]=leader_id, [3]=leader_username,
-        # [4]=leader_name, [5]=deputy_id, [6]=deputy_username, [7]=deputy_name
-        
         if clan[2] == user_id:
             user_info = {
                 'id': clan[2],
@@ -311,7 +305,6 @@ async def assign_to_clan(callback: CallbackQuery, state: FSMContext):
     parts = callback.data.split('_')
     
     try:
-        # Формат: assign_to_clan_{role_type}_{clan_id}_{user_id}
         role_type = parts[3]
         clan_id = int(parts[4])
         user_id = int(parts[5])
@@ -1336,7 +1329,6 @@ async def back_to_roles(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == 'select_existing_choice')
 async def select_existing_choice(callback: CallbackQuery, state: FSMContext):
-    """Назад к выбору способа назначения (из выбора клана)"""
     if callback.from_user.id not in ADMIN_IDS:
         await callback.answer('⛔ Нет прав')
         return
@@ -1365,7 +1357,6 @@ async def select_existing_choice(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == 'assign_choice_menu')
 async def assign_choice_menu_back(callback: CallbackQuery, state: FSMContext):
-    """Назад к выбору способа назначения (из списка руководителей)"""
     if callback.from_user.id not in ADMIN_IDS:
         await callback.answer('⛔ Нет прав')
         return
@@ -1394,7 +1385,6 @@ async def assign_choice_menu_back(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == 'back_to_manage_roles')
 async def back_to_manage_roles(callback: CallbackQuery, state: FSMContext):
-    """Назад в управление руководителями"""
     if callback.from_user.id not in ADMIN_IDS:
         await callback.answer('⛔ Нет прав')
         return
@@ -1413,7 +1403,6 @@ async def back_to_manage_roles(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == 'back_to_assign_choice')
 async def back_to_assign_choice(callback: CallbackQuery, state: FSMContext):
-    """Назад к выбору способа назначения (из выбора клана)"""
     if callback.from_user.id not in ADMIN_IDS:
         await callback.answer('⛔ Нет прав')
         return
@@ -1436,7 +1425,6 @@ async def back_to_assign_choice(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == 'back_to_clan_management')
 async def back_to_clan_management(callback: CallbackQuery, state: FSMContext):
-    """Назад в управление кланами"""
     if callback.from_user.id not in ADMIN_IDS:
         await callback.answer('⛔ Нет прав')
         return
@@ -1449,4 +1437,201 @@ async def back_to_clan_management(callback: CallbackQuery, state: FSMContext):
         '🗑 Удалить существующий клан\n'
         '✏️ Редактировать данные клана',
         reply_markup=admin_clan_management_menu()
+    )
+
+
+# ============================================================
+# 👑 УПРАВЛЕНИЕ АДМИНАМИ
+# ============================================================
+
+@router.callback_query(F.data == 'admin_manage_admins')
+async def admin_manage_admins(callback: CallbackQuery):
+    if callback.from_user.id not in ADMIN_IDS:
+        await callback.answer('⛔ Нет прав')
+        return
+    await callback.answer()
+    await callback.message.edit_text(
+        '👑 УПРАВЛЕНИЕ АДМИНАМИ\n\n'
+        'Здесь вы можете добавить или удалить администраторов бота.\n\n'
+        '⚠️ Админы из .env (основные) удалить нельзя.',
+        reply_markup=manage_admins_menu()
+    )
+
+
+@router.callback_query(F.data == 'admin_list_admins')
+async def admin_list_admins(callback: CallbackQuery):
+    if callback.from_user.id not in ADMIN_IDS:
+        await callback.answer('⛔ Нет прав')
+        return
+    await callback.answer()
+
+    env_admins = [int(x.strip()) for x in os.getenv('ADMIN_IDS', '').split(',') if x.strip()]
+    db_admins = await get_admins_list()
+
+    text = '👑 СПИСОК АДМИНОВ:\n\n'
+
+    text += '🔒 Основные (из .env):\n'
+    for admin_id in env_admins:
+        text += f'   ID: {admin_id}\n'
+
+    text += '\n📝 Добавленные через бота:\n'
+    if not db_admins:
+        text += '   Нет дополнительных админов.\n'
+    else:
+        for admin in db_admins:
+            admin_id, username, name, added_by, created_at = admin
+            text += f'   {name or "Без имени"} (@{username or "❌"}) — ID: {admin_id}\n'
+            text += f'   Добавлен: {created_at[:10] if created_at else "неизвестно"}\n\n'
+
+    await callback.message.edit_text(text, reply_markup=manage_admins_menu())
+
+
+@router.callback_query(F.data == 'admin_add_admin')
+async def admin_add_admin_start(callback: CallbackQuery, state: FSMContext):
+    if callback.from_user.id not in ADMIN_IDS:
+        await callback.answer('⛔ Нет прав')
+        return
+    await callback.answer()
+    await state.set_state(AdminForm.waiting_admin_id)
+    await callback.message.edit_text(
+        '➕ ДОБАВЛЕНИЕ АДМИНА\n\n'
+        '1️⃣ Введите Telegram ID нового админа (число):\n'
+        'Пример: 123456789',
+        reply_markup=cancel_button()
+    )
+
+
+@router.message(AdminForm.waiting_admin_id)
+async def process_admin_id(message: Message, state: FSMContext):
+    try:
+        user_id = int(message.text.strip())
+    except ValueError:
+        await message.answer('❌ Введите корректный ID (число):')
+        return
+
+    await state.update_data(new_admin_id=user_id)
+    await state.set_state(AdminForm.waiting_admin_username)
+    await message.answer(
+        f'✅ ID: {user_id}\n\n'
+        '2️⃣ Введите USERNAME (без @):\n'
+        'Или отправьте "пропустить"',
+        reply_markup=cancel_button()
+    )
+
+
+@router.message(AdminForm.waiting_admin_username)
+async def process_admin_username(message: Message, state: FSMContext):
+    text = message.text.strip()
+    username = None if text.lower() in ['пропустить', 'skip'] else text.replace('@', '')
+
+    await state.update_data(new_admin_username=username)
+    await state.set_state(AdminForm.waiting_admin_name)
+    await message.answer(
+        f'✅ Username: {username if username else "❌"}\n\n'
+        '3️⃣ Введите ИМЯ админа:\n'
+        'Или отправьте "пропустить"',
+        reply_markup=cancel_button()
+    )
+
+
+@router.message(AdminForm.waiting_admin_name)
+async def process_admin_name(message: Message, state: FSMContext):
+    text = message.text.strip()
+    name = None if text.lower() in ['пропустить', 'skip'] else text
+
+    data = await state.get_data()
+    user_id = data.get('new_admin_id')
+    username = data.get('new_admin_username')
+    added_by = message.from_user.id
+
+    await add_admin(user_id, username, name, added_by)
+
+    if user_id not in ADMIN_IDS:
+        ADMIN_IDS.append(user_id)
+
+    await state.clear()
+    await message.answer(
+        f'✅ Админ добавлен!\n\n'
+        f'👤 {name or "Без имени"} (@{username or "❌"})\n'
+        f'🆔 ID: {user_id}\n\n'
+        f'Теперь у него есть доступ к админ-панели.',
+        reply_markup=manage_admins_menu()
+    )
+
+
+@router.callback_query(F.data == 'admin_remove_admin')
+async def admin_remove_admin_start(callback: CallbackQuery):
+    if callback.from_user.id not in ADMIN_IDS:
+        await callback.answer('⛔ Нет прав')
+        return
+    await callback.answer()
+
+    env_admins = [int(x.strip()) for x in os.getenv('ADMIN_IDS', '').split(',') if x.strip()]
+    db_admins = await get_admins_list()
+
+    removable = [a for a in db_admins if a[0] not in env_admins]
+
+    if not removable:
+        await callback.message.edit_text(
+            '❌ Нет админов, которых можно удалить.\n'
+            'Все текущие админы указаны в .env (основные).',
+            reply_markup=manage_admins_menu()
+        )
+        return
+
+    buttons = []
+    for admin in removable:
+        admin_id, username, name, added_by, created_at = admin
+        display = f'{name or "Без имени"} (@{username or "❌"})'
+        buttons.append([InlineKeyboardButton(
+            text=f'🗑 {display}',
+            callback_data=f'remove_admin_{admin_id}'
+        )])
+
+    buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='admin_manage_admins')])
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    await callback.message.edit_text('🗑 Выберите админа для удаления:', reply_markup=keyboard)
+
+
+@router.callback_query(F.data.startswith('remove_admin_'))
+async def remove_admin_confirm(callback: CallbackQuery):
+    if callback.from_user.id not in ADMIN_IDS:
+        await callback.answer('⛔ Нет прав')
+        return
+    await callback.answer()
+
+    user_id = int(callback.data.split('_')[2])
+
+    env_admins = [int(x.strip()) for x in os.getenv('ADMIN_IDS', '').split(',') if x.strip()]
+    if user_id in env_admins:
+        await callback.message.edit_text(
+            '❌ Этого админа нельзя удалить — он в .env',
+            reply_markup=manage_admins_menu()
+        )
+        return
+
+    await callback.message.edit_text(
+        f'⚠️ Удалить админа ID: {user_id}?',
+        reply_markup=confirm_remove_admin_button(user_id)
+    )
+
+
+@router.callback_query(F.data.startswith('confirm_remove_admin_'))
+async def confirm_remove_admin(callback: CallbackQuery):
+    if callback.from_user.id not in ADMIN_IDS:
+        await callback.answer('⛔ Нет прав')
+        return
+    await callback.answer()
+
+    user_id = int(callback.data.split('_')[3])
+
+    await remove_admin(user_id)
+
+    if user_id in ADMIN_IDS:
+        ADMIN_IDS.remove(user_id)
+
+    await callback.message.edit_text(
+        f'✅ Админ ID: {user_id} удалён.',
+        reply_markup=manage_admins_menu()
     )
