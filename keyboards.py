@@ -23,11 +23,10 @@ def leader_menu():
 
 
 # ============================================================
-# 🎯 ВЫБОР КЛАНА — ДИНАМИЧЕСКАЯ ВЕРСИЯ
+# 🎯 ВЫБОР КЛАНА
 # ============================================================
 
 async def clan_choice():
-    """Клавиатура выбора клана (только активные)"""
     try:
         clans = await get_clans_with_status()
     except Exception as e:
@@ -125,32 +124,29 @@ def admin_menu():
 
 
 # ============================================================
-# 👥 УПРАВЛЕНИЕ РУКОВОДИТЕЛЯМИ — ПОЛНАЯ ЛОГИКА
+# 👥 УПРАВЛЕНИЕ РУКОВОДИТЕЛЯМИ
 # ============================================================
 
 def manage_roles_menu():
-    """Главное меню управления руководителями"""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='➕ Назначить лидера', callback_data='role_assign_leader')],
         [InlineKeyboardButton(text='➕ Назначить зама', callback_data='role_assign_deputy')],
         [InlineKeyboardButton(text='🗑 Удалить лидера', callback_data='role_remove_leader')],
         [InlineKeyboardButton(text='🗑 Удалить зама', callback_data='role_remove_deputy')],
         [InlineKeyboardButton(text='📋 Список руководителей', callback_data='role_list')],
-        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')],  # ← В АДМИН-ПАНЕЛЬ
+        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')],
     ])
 
 
 def assign_choice_menu():
-    """Выбор способа назначения (из существующих / новый)"""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='📋 Выбрать из существующих', callback_data='assign_from_existing')],
         [InlineKeyboardButton(text='✏️ Ввести нового пользователя', callback_data='assign_from_new')],
-        [InlineKeyboardButton(text='🔙 Назад', callback_data='admin_manage_roles')],  # ← В УПРАВЛЕНИЕ РУКОВОДИТЕЛЯМИ
+        [InlineKeyboardButton(text='🔙 Назад', callback_data='admin_manage_roles')],
     ])
 
 
 def select_existing_leader_buttons(leaders, role_type):
-    """Список существующих руководителей"""
     buttons = []
     for leader in leaders:
         emoji = '👑' if leader['role'] == 'Лидер' else '👤'
@@ -159,12 +155,11 @@ def select_existing_leader_buttons(leaders, role_type):
             callback_data=f"select_existing_{leader['id']}_{leader['clan_id']}"
         )])
     buttons.append([InlineKeyboardButton(text='✏️ Ввести нового пользователя', callback_data='assign_from_new')])
-    buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='assign_choice_menu')])  # ← К ВЫБОРУ СПОСОБА
+    buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='assign_choice_menu')])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 def select_clan_for_role_buttons(clans, role_type, user_id, username, name):
-    """Выбор клана для назначения (из существующих)"""
     buttons = []
     emojis = {1: '🔴', 2: '🟡', 3: '🟢', 4: '🟣', 5: '🟠'}
     for clan in clans:
@@ -174,7 +169,7 @@ def select_clan_for_role_buttons(clans, role_type, user_id, username, name):
             text=f"{emoji} {clan_name}",
             callback_data=f"assign_to_clan_{role_type}_{clan_id}_{user_id}_{username}_{name}"
         )])
-    buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_assign_choice')])  # ← К ВЫБОРУ СПОСОБА
+    buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_assign_choice')])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -187,28 +182,26 @@ def select_clan_for_role_buttons_simple(clans, role_type, user_id, username):
         emoji = emojis.get(clan_id, '🔵')
         buttons.append([InlineKeyboardButton(
             text=f"{emoji} {clan_name}",
-            callback_data=f"assign_to_clan_{role_type}_{clan_id}_{user_id}"  # ← ТОЛЬКО ID!
+            callback_data=f"assign_to_clan_{role_type}_{clan_id}_{user_id}"
         )])
     buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='assign_from_new')])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 def clan_choice_for_roles():
-    """Выбор клана для удаления руководителя"""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='🔴 KAIF', callback_data='role_clan_1')],
         [InlineKeyboardButton(text='🟡 NA KAIFE', callback_data='role_clan_2')],
         [InlineKeyboardButton(text='🟢 KAIF METRO', callback_data='role_clan_3')],
         [InlineKeyboardButton(text='🟣 KAIF ESPORTS', callback_data='role_clan_4')],
         [InlineKeyboardButton(text='🟠 TDM', callback_data='role_clan_5')],
-        [InlineKeyboardButton(text='🔙 Назад', callback_data='admin_manage_roles')],  # ← В УПРАВЛЕНИЕ РУКОВОДИТЕЛЯМИ
+        [InlineKeyboardButton(text='🔙 Назад', callback_data='admin_manage_roles')],
     ])
 
 
 def cancel_button():
-    """Отмена действия"""
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='❌ Отмена', callback_data='admin_manage_roles')],  # ← В УПРАВЛЕНИЕ РУКОВОДИТЕЛЯМИ
+        [InlineKeyboardButton(text='❌ Отмена', callback_data='admin_manage_roles')],
     ])
 
 
@@ -224,7 +217,6 @@ def test_application_menu():
 
 
 async def clan_choice_for_test():
-    """Клавиатура выбора клана для тестовой анкеты"""
     try:
         clans = await get_clans_with_status()
     except Exception as e:
@@ -266,7 +258,7 @@ def admin_clan_status_menu():
         [InlineKeyboardButton(text='🟢 KAIF METRO', callback_data='admin_clan_status_3')],
         [InlineKeyboardButton(text='🟣 KAIF ESPORTS', callback_data='admin_clan_status_4')],
         [InlineKeyboardButton(text='🟠 TDM', callback_data='admin_clan_status_5')],
-        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')],  # ← В АДМИН-ПАНЕЛЬ
+        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')],
     ])
 
 
@@ -280,7 +272,7 @@ def clan_toggle_button(clan_id: int, clan_name: str, is_active: bool):
             text=f"🔄 {emoji} {clan_name}: {status_text}",
             callback_data=f'toggle_clan_{clan_id}'
         )],
-        [InlineKeyboardButton(text='🔙 Назад', callback_data='admin_clan_status')],  # ← К ВЫБОРУ КЛАНА
+        [InlineKeyboardButton(text='🔙 Назад', callback_data='admin_clan_status')],
     ])
 
 
@@ -293,12 +285,12 @@ def admin_clan_management_menu():
         [InlineKeyboardButton(text='➕ Добавить клан', callback_data='admin_add_clan')],
         [InlineKeyboardButton(text='🗑 Удалить клан', callback_data='admin_delete_clan')],
         [InlineKeyboardButton(text='✏️ Редактировать клан', callback_data='admin_edit_clan')],
-        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')],  # ← В АДМИН-ПАНЕЛЬ
+        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')],
     ])
 
 
 # ============================================================
-# 💬 СВЯЗАТЬСЯ (ССЫЛКИ)
+# 💬 СВЯЗАТЬСЯ
 # ============================================================
 
 def contact_menu(app_id):
