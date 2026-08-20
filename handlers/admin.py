@@ -34,7 +34,7 @@ async def process_new_user_name(message: Message, state: FSMContext):
     
     await state.update_data(new_name=name)
     await state.update_data(pending_name=name)
-    await state.update_data(new_username=username)  # ← СОХРАНЯЕМ USERNAME
+    await state.update_data(new_username=username)
     
     clans = await get_clans()
     text_msg = f'👤 Новый пользователь:\n'
@@ -49,6 +49,7 @@ async def process_new_user_name(message: Message, state: FSMContext):
         text_msg,
         reply_markup=select_clan_for_role_buttons_simple(clans, role_type, user_id, username or '')
     )
+
 
 # ============================================================
 # 👥 УПРАВЛЕНИЕ РУКОВОДИТЕЛЯМИ
@@ -112,7 +113,6 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
         if len(clan) < 9:
             continue
         
-        # ПРАВИЛЬНЫЙ ПОРЯДОК ИЗ ЛОГОВ:
         # [0]=id, [1]=name, [2]=leader_id, [3]=leader_username,
         # [4]=leader_name, [5]=deputy_id, [6]=deputy_username,
         # [7]=deputy_name, [8]=created_at, [9]=is_active, [10]=emoji
@@ -127,13 +127,11 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
         deputy_username = clan[6] if len(clan) > 6 else ''
         deputy_name = clan[7] if len(clan) > 7 else ''
         
-        # ✅ ФИКС: если leader_name пустой, используем leader_username как имя
         if not leader_name:
             leader_name = leader_username or '❌'
         if not deputy_name:
             deputy_name = deputy_username or '❌'
         
-        # ✅ ФИКС: если leader_username содержит имя (кириллица), значит это имя, а не username
         if leader_username and any(ord(c) > 127 for c in leader_username):
             leader_name = leader_username
             leader_username = ''
@@ -178,6 +176,7 @@ async def assign_from_existing(callback: CallbackQuery, state: FSMContext):
 
     await callback.message.edit_text(text, reply_markup=select_existing_leader_buttons(leaders, role_type))
 
+
 @router.callback_query(F.data == 'assign_from_new')
 async def assign_from_new(callback: CallbackQuery, state: FSMContext):
     if callback.from_user.id not in ADMIN_IDS:
@@ -196,7 +195,6 @@ async def assign_from_new(callback: CallbackQuery, state: FSMContext):
 
 @router.message(RoleForm.waiting_user_id)
 async def process_new_user_id(message: Message, state: FSMContext):
-    """Обработка ID нового пользователя"""
     try:
         user_id = int(message.text.strip())
     except ValueError:
@@ -216,7 +214,6 @@ async def process_new_user_id(message: Message, state: FSMContext):
 
 @router.message(RoleForm.waiting_username)
 async def process_new_username(message: Message, state: FSMContext):
-    """Обработка username нового пользователя"""
     text = message.text.strip()
     if text.lower() in ['пропустить', 'skip']:
         username = None
@@ -264,18 +261,17 @@ async def select_existing_leader(callback: CallbackQuery, state: FSMContext):
     for clan in clans:
         if len(clan) < 9:
             continue
-        # ПРАВИЛЬНЫЙ ПОРЯДОК:
         # [0]=id, [1]=name, [2]=leader_id, [3]=leader_username,
         # [4]=leader_name, [5]=deputy_id, [6]=deputy_username, [7]=deputy_name
         
-        if clan[2] == user_id:  # leader_id на [2]
+        if clan[2] == user_id:
             user_info = {
                 'id': clan[2],
                 'username': clan[3] or '',
                 'name': clan[4] or clan[3] or 'Пользователь'
             }
             break
-        if clan[5] == user_id:  # deputy_id на [5]
+        if clan[5] == user_id:
             user_info = {
                 'id': clan[5],
                 'username': clan[6] or '',
@@ -321,7 +317,6 @@ async def assign_to_clan(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer('❌ Ошибка: неверный формат данных')
         return
 
-    # ✅ БЕРЁМ ВСЁ ИЗ STATE!
     data = await state.get_data()
     username = data.get('new_username') or data.get('selected_username') or ''
     name = data.get('pending_name') or data.get('new_name') or data.get('selected_name') or 'Пользователь'
@@ -331,7 +326,6 @@ async def assign_to_clan(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer('❌ Клан не найден')
         return
 
-    # Удаляем пользователя со всех должностей
     clans = await get_clans()
     for c in clans:
         if len(c) > 2 and c[2] == user_id:
@@ -354,6 +348,7 @@ async def assign_to_clan(callback: CallbackQuery, state: FSMContext):
 
     await state.clear()
     await callback.message.answer('👥 Управление руководителями\n\nВыберите действие:', reply_markup=manage_roles_menu())
+
 
 @router.callback_query(F.data == 'role_remove_leader')
 async def role_remove_leader(callback: CallbackQuery):
@@ -525,7 +520,7 @@ async def confirm_clear_test(callback: CallbackQuery):
 
 
 # ============================================================
-# 🔄 УПРАВЛЕНИЕ СТАТУСОМ КЛАНОВ (АДМИН)
+# 🔄 УПРАВЛЕНИЕ СТАТУСОМ КЛАНОВ
 # ============================================================
 
 @router.callback_query(F.data == 'admin_clan_status')
@@ -1407,4 +1402,69 @@ async def back_to_manage_roles(callback: CallbackQuery, state: FSMContext):
         '👥 Управление руководителями\n\n'
         'Здесь вы можете назначить или удалить лидера/зама для любого клана.',
         reply_markup=manage_roles_menu()
+    )
+
+
+# ============================================================
+# 🔙 НАЗАД К ВЫБОРУ СПОСОБА НАЗНАЧЕНИЯ
+# ============================================================
+
+@router.callback_query(F.data == 'back_to_assign_choice')
+async def back_to_assign_choice(callback: CallbackQuery, state: FSMContext):
+    """Назад к выбору способа назначения (из выбора клана)"""
+    if callback.from_user.id not in ADMIN_IDS:
+        await callback.answer('⛔ Нет прав')
+        return
+    await callback.answer()
+    
+    data = await state.get_data()
+    role_type = data.get('role_type', 'leader')
+    role_name = 'лидер' if role_type == 'leader' else 'зам'
+    
+    await callback.message.edit_text(
+        f'👥 Назначение {role_name}а\n\n'
+        'Выберите действие:',
+        reply_markup=assign_choice_menu()
+    )
+
+
+# ============================================================
+# 🔙 НАЗАД В ТЕСТОВУЮ АНКЕТУ
+# ============================================================
+
+@router.callback_query(F.data == 'admin_test_application')
+async def admin_test_application_back(callback: CallbackQuery):
+    """Назад в меню тестовой анкеты"""
+    if callback.from_user.id not in ADMIN_IDS:
+        await callback.answer('⛔ Нет прав')
+        return
+    await callback.answer()
+    
+    await callback.message.edit_text(
+        '🧪 ТЕСТОВАЯ АНКЕТА\n\n'
+        'Нажмите "Написать тестовую анкету", чтобы отправить заявку как кандидат.\n\n'
+        '📌 Анкета будет выглядеть как обычная заявка, но с пометкой "🧪 ТЕСТ"',
+        reply_markup=test_application_menu()
+    )
+
+
+# ============================================================
+# 🔙 НАЗАД В УПРАВЛЕНИЕ КЛАНАМИ
+# ============================================================
+
+@router.callback_query(F.data == 'back_to_clan_management')
+async def back_to_clan_management(callback: CallbackQuery, state: FSMContext):
+    """Назад в управление кланами"""
+    if callback.from_user.id not in ADMIN_IDS:
+        await callback.answer('⛔ Нет прав')
+        return
+    await callback.answer()
+    await state.clear()
+    await callback.message.edit_text(
+        '🏗️ УПРАВЛЕНИЕ КЛАНАМИ\n\n'
+        'Выберите действие:\n\n'
+        '➕ Добавить новый клан\n'
+        '🗑 Удалить существующий клан\n'
+        '✏️ Редактировать данные клана',
+        reply_markup=admin_clan_management_menu()
     )
