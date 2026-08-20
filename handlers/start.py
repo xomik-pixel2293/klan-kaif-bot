@@ -10,7 +10,7 @@ from database import get_clan_by_user
 from keyboards import (
     main_menu, leader_menu, admin_menu,
     manage_roles_menu, test_application_menu,
-    admin_clan_management_menu
+    admin_clan_management_menu, manage_admins_menu
 )
 
 router = Router()
@@ -80,24 +80,15 @@ async def cmd_admin(message: Message):
 
 
 # ============================================================
-# 🔙 ШАГ НАЗАД
+# 🔙 ЕДИНАЯ СИСТЕМА НАВИГАЦИИ
 # ============================================================
 
 @router.callback_query(F.data == 'back_to_main')
 async def back_to_main(callback: CallbackQuery, state: FSMContext):
+    """Главное меню (для обычных пользователей и лидеров)"""
     await callback.answer()
-    
-    data = await state.get_data()
-    is_test = data.get('is_test_mode', False)
-    
-    if is_test:
-        await callback.message.edit_text(
-            '🏠 Добро пожаловать в KLAN KAIF!\n\nВыберите действие:',
-            reply_markup=main_menu()
-        )
-        return
-    
     await state.clear()
+    
     clan = await get_clan_by_user(callback.from_user.id)
     if clan:
         await callback.message.edit_text('🏠 Главное меню:', reply_markup=leader_menu())
@@ -107,6 +98,7 @@ async def back_to_main(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == 'back_to_admin')
 async def back_to_admin(callback: CallbackQuery, state: FSMContext):
+    """Админ-панель"""
     await callback.answer()
     await state.clear()
     await callback.message.edit_text(
@@ -115,18 +107,51 @@ async def back_to_admin(callback: CallbackQuery, state: FSMContext):
     )
 
 
-@router.callback_query(F.data == 'back_to_roles')
+@router.callback_query(F.data == 'admin_manage_roles')
 async def back_to_roles(callback: CallbackQuery, state: FSMContext):
+    """Управление руководителями"""
     await callback.answer()
     await state.clear()
     await callback.message.edit_text(
-        '⚙️ АДМИН-ПАНЕЛЬ KLAN KAIF\n\nВыберите действие:',
-        reply_markup=admin_menu()
+        '👥 Управление руководителями\n\n'
+        'Здесь вы можете назначить или удалить лидера/зама для любого клана.',
+        reply_markup=manage_roles_menu()
     )
 
 
-@router.callback_query(F.data == 'back_to_test')
+@router.callback_query(F.data == 'assign_choice_menu')
+async def back_to_assign_choice(callback: CallbackQuery, state: FSMContext):
+    """Выбор способа назначения (из списка руководителей или клана)"""
+    await callback.answer()
+    data = await state.get_data()
+    role_type = data.get('role_type', 'leader')
+    role_name = 'лидер' if role_type == 'leader' else 'зам'
+    
+    await callback.message.edit_text(
+        f'👥 Назначение {role_name}а\n\n'
+        'Выберите действие:',
+        reply_markup=assign_choice_menu()
+    )
+
+
+@router.callback_query(F.data == 'back_to_clan_management')
+async def back_to_clan_management(callback: CallbackQuery, state: FSMContext):
+    """Управление кланами"""
+    await callback.answer()
+    await state.clear()
+    await callback.message.edit_text(
+        '🏗️ УПРАВЛЕНИЕ КЛАНАМИ\n\n'
+        'Выберите действие:\n\n'
+        '➕ Добавить новый клан\n'
+        '🗑 Удалить существующий клан\n'
+        '✏️ Редактировать данные клана',
+        reply_markup=admin_clan_management_menu()
+    )
+
+
+@router.callback_query(F.data == 'admin_test_application')
 async def back_to_test(callback: CallbackQuery, state: FSMContext):
+    """Тестовая анкета"""
     await callback.answer()
     await state.clear()
     await callback.message.edit_text(
@@ -137,15 +162,40 @@ async def back_to_test(callback: CallbackQuery, state: FSMContext):
     )
 
 
-@router.callback_query(F.data == 'back_to_clan_management')
-async def back_to_clan_management(callback: CallbackQuery, state: FSMContext):
+@router.callback_query(F.data == 'admin_manage_admins')
+async def back_to_admins(callback: CallbackQuery, state: FSMContext):
+    """Управление админами"""
     await callback.answer()
     await state.clear()
     await callback.message.edit_text(
-        '🏗️ УПРАВЛЕНИЕ КЛАНАМИ\n\n'
-        'Выберите действие:\n\n'
-        '➕ Добавить новый клан\n'
-        '🗑 Удалить существующий клан\n'
-        '✏️ Редактировать данные клана',
-        reply_markup=admin_clan_management_menu()
+        '👑 УПРАВЛЕНИЕ АДМИНАМИ\n\n'
+        'Здесь вы можете добавить или удалить администраторов бота.\n\n'
+        '⚠️ Админы из .env (основные) удалить нельзя.',
+        reply_markup=manage_admins_menu()
+    )
+
+
+@router.callback_query(F.data == 'write_test_application')
+async def write_test_application_nav(callback: CallbackQuery, state: FSMContext):
+    """Назад из выбора клана в тестовой анкете"""
+    await callback.answer()
+    await state.clear()
+    await callback.message.edit_text(
+        '📝 НАПИШИТЕ ТЕСТОВУЮ АНКЕТУ\n\n'
+        '📋 Скопируйте шаблон и заполните:\n'
+        '━━━━━━━━━━━━━━━━━━━━━━\n'
+        'Имя: \n'
+        'Возраст: \n'
+        'Ник: \n'
+        'ID: \n'
+        'Часовой пояс (МСК): \n'
+        '━━━━━━━━━━━━━━━━━━━━━━\n\n'
+        '📌 ПРИМЕР:\n'
+        'Имя: Тестовый Пользователь\n'
+        'Возраст: 25\n'
+        'Ник: Test_User\n'
+        'ID: 123456789\n'
+        'Часовой пояс (МСК): +0\n\n'
+        '⚠️ После заполнения выберите клан для отправки.',
+        reply_markup=back_button('back_to_admin')
     )
