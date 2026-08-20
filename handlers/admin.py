@@ -1481,7 +1481,11 @@ async def admin_list_admins(callback: CallbackQuery):
         for admin in db_admins:
             admin_id, username, name, added_by, created_at = admin
             text += f'   {name or "Без имени"} (@{username or "❌"}) — ID: {admin_id}\n'
-            text += f'   Добавлен: {created_at[:10] if created_at else "неизвестно"}\n\n'
+            if isinstance(created_at, datetime):
+    created_at_str = created_at.strftime('%d.%m.%Y')
+else:
+    created_at_str = str(created_at)[:10] if created_at else "неизвестно"
+text += f'   Добавлен: {created_at_str}\n\n'
 
     await callback.message.edit_text(text, reply_markup=manage_admins_menu())
 
