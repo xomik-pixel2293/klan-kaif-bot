@@ -9,7 +9,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.types import BotCommand
 from aiogram.client.session.aiohttp import AiohttpSession
 from flask import Flask
-from config import ADMIN_IDS
+from config import BOT_TOKEN, ADMIN_IDS
 from database import init_db, get_admin_ids
 
 logging.basicConfig(level=logging.INFO)
@@ -40,6 +40,7 @@ async def set_commands(bot: Bot):
 async def main():
     await init_db()
     
+    # Загружаем админов из БД в глобальный список
     db_admins = await get_admin_ids()
     for admin_id in db_admins:
         if admin_id not in ADMIN_IDS:
