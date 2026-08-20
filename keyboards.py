@@ -119,6 +119,7 @@ def admin_menu():
         [InlineKeyboardButton(text='🧪 Тестовая анкета', callback_data='admin_test_application')],
         [InlineKeyboardButton(text='🗑 Очистить тестовые заявки', callback_data='admin_clear_test')],
         [InlineKeyboardButton(text='🧑‍💻 Стать кандидатом', callback_data='admin_become_candidate')],
+        [InlineKeyboardButton(text='👑 Управление админами', callback_data='admin_manage_admins')],
         [InlineKeyboardButton(text='🔙 Выйти', callback_data='back_to_main')],
     ])
 
@@ -286,6 +287,26 @@ def admin_clan_management_menu():
         [InlineKeyboardButton(text='🗑 Удалить клан', callback_data='admin_delete_clan')],
         [InlineKeyboardButton(text='✏️ Редактировать клан', callback_data='admin_edit_clan')],
         [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')],
+    ])
+
+
+# ============================================================
+# 👑 УПРАВЛЕНИЕ АДМИНАМИ
+# ============================================================
+
+def manage_admins_menu():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='➕ Добавить админа', callback_data='admin_add_admin')],
+        [InlineKeyboardButton(text='🗑 Удалить админа', callback_data='admin_remove_admin')],
+        [InlineKeyboardButton(text='📋 Список админов', callback_data='admin_list_admins')],
+        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')],
+    ])
+
+
+def confirm_remove_admin_button(user_id):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='✅ Да, удалить', callback_data=f'confirm_remove_admin_{user_id}')],
+        [InlineKeyboardButton(text='❌ Отмена', callback_data='admin_remove_admin')],
     ])
 
 
