@@ -874,6 +874,74 @@ async def clear_test_applications():
             await db.execute("DELETE FROM applications WHERE username = 'test_user'")
             await db.commit()
 
+# ============================================================
+# 👑 АДМИНЫ
+# ============================================================
+
+async def get_admin_ids():
+    url = get_database_url()
+    if url:
+        conn = await asyncpg.connect(url)
+        try:
+            rows = await conn.fetch('SELECT user_id FROM admins')
+            return [row['user_id'] for row in rows]
+        finally:
+            await conn.close()
+    else:
+        async with aiosqlite.connect(DB_PATH) as db:
+            cursor = await db.execute('SELECT user_id FROM admins')
+            rows = await cursor.fetchall()
+            return [row[0] for row in rows]
+
+
+async def add_admin(user_id: int, username: str = None, name: str = None, added_by: int = None):
+    url = get_database_url()
+    if url:
+        conn = await asyncpg.connect(url)
+        try:
+            await conn.execute('''
+                INSERT INTO admins (user_id, username, name, added_by)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (user_id) DO UPDATE SET username = $2, name = $3
+            ''', user_id, username, name, added_by)
+        finally:
+            await conn.close()
+    else:
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute('''
+                INSERT OR REPLACE INTO admins (user_id, username, name, added_by)
+                VALUES (?, ?, ?, ?)
+            ''', (user_id, username, name, added_by))
+            await db.commit()
+
+
+async def remove_admin(user_id: int):
+    url = get_database_url()
+    if url:
+        conn = await asyncpg.connect(url)
+        try:
+            await conn.execute('DELETE FROM admins WHERE user_id = $1', user_id)
+        finally:
+            await conn.close()
+    else:
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute('DELETE FROM admins WHERE user_id = ?', (user_id,))
+            await db.commit()
+
+
+async def get_admins_list():
+    url = get_database_url()
+    if url:
+        conn = await asyncpg.connect(url)
+        try:
+            rows = await conn.fetch('SELECT * FROM admins ORDER BY created_at DESC')
+            return [tuple(row) for row in rows]
+        finally:
+            await conn.close()
+    else:
+        async with aiosqlite.connect(DB_PATH) as db:
+            cursor = await db.execute('SELECT * FROM admins ORDER BY created_at DESC')
+            return await cursor.fetchall()
 
 # ============================================================
 # 🔔 НАПОМИНАНИЯ
