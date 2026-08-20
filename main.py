@@ -5,14 +5,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import asyncio
 import logging
 import threading
-import os
 from aiogram import Bot, Dispatcher
 from aiogram.types import BotCommand
 from aiogram.client.session.aiohttp import AiohttpSession
 from flask import Flask
-from config import BOT_TOKEN
-from database import init_db
-from handlers import router  # ← ИМПОРТ ОДИН РАЗ
+from config import ADMIN_IDS
+from database import init_db, get_admin_ids
 
 logging.basicConfig(level=logging.INFO)
 
@@ -42,6 +40,12 @@ async def set_commands(bot: Bot):
 async def main():
     await init_db()
     
+    db_admins = await get_admin_ids()
+    for admin_id in db_admins:
+        if admin_id not in ADMIN_IDS:
+            ADMIN_IDS.append(admin_id)
+    print(f"👑 Админов загружено: {len(ADMIN_IDS)}")
+    
     web_thread = threading.Thread(target=run_web, daemon=True)
     web_thread.start()
     print("🌐 Веб-сервер запущен на порту 10000")
@@ -51,8 +55,7 @@ async def main():
 
     await set_commands(bot)
 
-    # Запуск планировщика напоминаний
-    from handlers.scheduler import start_scheduler  # ← ПРАВИЛЬНЫЙ ИМПОРТ
+    from handlers.scheduler import start_scheduler
     await start_scheduler(bot)
 
     dp = Dispatcher()
