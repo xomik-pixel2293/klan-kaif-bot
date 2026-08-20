@@ -59,7 +59,7 @@ def view_clans():
 
     print("\n🏆 КЛАНЫ:\n")
     for row in rows:
-        clan_id, name, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, created_at = row
+        clan_id, name, emoji, leader_id, leader_username, leader_name, deputy_id, deputy_username, deputy_name, is_active, created_at = row
         print(f"{name}:")
         print(f"  Лидер: {leader_name} (@{leader_username})" if leader_id else "  Лидер: ❌")
         print(f"  Зам: {deputy_name} (@{deputy_username})" if deputy_id else "  Зам: ❌")

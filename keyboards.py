@@ -212,7 +212,7 @@ def cancel_button():
 def test_application_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='✏️ Написать тестовую анкету', callback_data='write_test_application')],
-        [InlineKeyboardButton(text='🔙 Назад', callback_data='admin_test_application')],
+        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_admin')],
     ])
 
 
