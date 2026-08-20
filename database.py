@@ -36,24 +36,22 @@ async def init_db():
     if url:
         conn = await asyncpg.connect(url)
         try:
-            # ✅ ДОБАВЛЯЕМ КОЛОНКИ В СУЩЕСТВУЮЩУЮ ТАБЛИЦУ
-            # Сначала добавляем emoji (если её нет)
+            # Добавляем колонки если их нет
             try:
                 await conn.execute('ALTER TABLE clans ADD COLUMN emoji TEXT DEFAULT "🔵"')
                 print("✅ Добавлена колонка emoji")
             except Exception as e:
                 if 'already exists' in str(e).lower() or 'duplicate' in str(e).lower():
-                    print("ℹ️ Колонка emoji уже существует")
+                    pass
                 else:
                     print(f"⚠️ Ошибка при добавлении emoji: {e}")
             
-            # Добавляем is_active (если её нет)
             try:
                 await conn.execute('ALTER TABLE clans ADD COLUMN is_active BOOLEAN DEFAULT TRUE')
                 print("✅ Добавлена колонка is_active")
             except Exception as e:
                 if 'already exists' in str(e).lower() or 'duplicate' in str(e).lower():
-                    print("ℹ️ Колонка is_active уже существует")
+                    pass
                 else:
                     print(f"⚠️ Ошибка при добавлении is_active: {e}")
             
@@ -117,13 +115,11 @@ async def init_db():
                 )
             ''')
             
-            # Добавляем колонку is_active если её нет
             try:
                 await db.execute('ALTER TABLE clans ADD COLUMN is_active INTEGER DEFAULT 1')
             except:
                 pass
             
-            # Добавляем колонку emoji если её нет
             try:
                 await db.execute('ALTER TABLE clans ADD COLUMN emoji TEXT DEFAULT "🔵"')
             except:
@@ -183,7 +179,6 @@ async def get_clan_by_name(name):
 
 
 async def get_clan_by_user(user_id):
-    """Получить клан, где пользователь является лидером или замом"""
     url = get_database_url()
     if url:
         conn = await asyncpg.connect(url)
@@ -199,11 +194,10 @@ async def get_clan_by_user(user_id):
 
 
 # ============================================================
-# 🔄 СТАТУСЫ КЛАНОВ (ВКЛ/ВЫКЛ)
+# 🔄 СТАТУСЫ КЛАНОВ
 # ============================================================
 
 async def get_clans_with_status():
-    """Получить все кланы с их статусом активности"""
     url = get_database_url()
     if url:
         try:
@@ -215,12 +209,7 @@ async def get_clans_with_status():
                 await conn.close()
         except Exception as e:
             print(f"❌ Ошибка get_clans_with_status: {e}")
-            return [
-                (1, 'KAIF', '🔴', True),
-                (2, 'NA KAIFE', '🟡', True),
-                (3, 'KAIF METRO', '🟢', True),
-                (4, 'KAIF ESPORTS', '🟣', True),
-            ]
+            return []
     else:
         try:
             async with aiosqlite.connect(DB_PATH) as db:
@@ -229,24 +218,15 @@ async def get_clans_with_status():
                 return [(row[0], row[1], row[2], bool(row[3])) for row in rows]
         except Exception as e:
             print(f"❌ Ошибка get_clans_with_status: {e}")
-            return [
-                (1, 'KAIF', '🔴', True),
-                (2, 'NA KAIFE', '🟡', True),
-                (3, 'KAIF METRO', '🟢', True),
-                (4, 'KAIF ESPORTS', '🟣', True),
-            ]
+            return []
 
 
 async def set_clan_active(clan_id: int, is_active: bool):
-    """Включить/выключить приём заявок в клан"""
     url = get_database_url()
     if url:
         conn = await asyncpg.connect(url)
         try:
-            await conn.execute(
-                'UPDATE clans SET is_active = $1 WHERE id = $2',
-                is_active, clan_id
-            )
+            await conn.execute('UPDATE clans SET is_active = $1 WHERE id = $2', is_active, clan_id)
             print(f"✅ Статус клана {clan_id} изменён на {is_active}")
         except Exception as e:
             print(f"❌ Ошибка при обновлении статуса: {e}")
@@ -254,16 +234,12 @@ async def set_clan_active(clan_id: int, is_active: bool):
             await conn.close()
     else:
         async with aiosqlite.connect(DB_PATH) as db:
-            await db.execute(
-                'UPDATE clans SET is_active = ? WHERE id = ?',
-                (1 if is_active else 0, clan_id)
-            )
+            await db.execute('UPDATE clans SET is_active = ? WHERE id = ?', (1 if is_active else 0, clan_id))
             await db.commit()
             print(f"✅ Статус клана {clan_id} изменён на {is_active}")
 
 
 async def get_clan_active_status(clan_id: int) -> bool:
-    """Получить статус активности клана (True — включён)"""
     url = get_database_url()
     if url:
         conn = await asyncpg.connect(url)
@@ -280,7 +256,7 @@ async def get_clan_active_status(clan_id: int) -> bool:
 
 
 # ============================================================
-# 👥 ФУНКЦИИ УПРАВЛЕНИЯ РУКОВОДИТЕЛЯМИ
+# 👥 УПРАВЛЕНИЕ РУКОВОДИТЕЛЯМИ
 # ============================================================
 
 async def update_clan_leader(clan_id, leader_id, leader_username, leader_name):
@@ -351,7 +327,6 @@ async def add_clan(name: str, emoji: str = '🔵', leader_id: int = None,
                    leader_username: str = None, leader_name: str = None,
                    deputy_id: int = None, deputy_username: str = None, 
                    deputy_name: str = None) -> int:
-    """Добавить новый клан"""
     url = get_database_url()
     if url:
         conn = await asyncpg.connect(url)
@@ -379,7 +354,6 @@ async def add_clan(name: str, emoji: str = '🔵', leader_id: int = None,
 
 
 async def delete_clan(clan_id: int) -> bool:
-    """Удалить клан (и все связанные заявки и ссылки)"""
     url = get_database_url()
     if url:
         conn = await asyncpg.connect(url)
@@ -402,7 +376,6 @@ async def delete_clan(clan_id: int) -> bool:
 async def update_clan(clan_id: int, name: str = None, emoji: str = None,
                       leader_id: int = None, leader_username: str = None, leader_name: str = None,
                       deputy_id: int = None, deputy_username: str = None, deputy_name: str = None):
-    """Обновить данные клана"""
     url = get_database_url()
     
     updates = []
@@ -672,7 +645,7 @@ async def get_clan_applications(clan_id):
 
 
 # ============================================================
-# 🚫 ФУНКЦИИ РАБОТЫ С ЧЁРНЫМ СПИСКОМ
+# 🚫 ЧЁРНЫЙ СПИСОК
 # ============================================================
 
 async def is_in_blacklist(user_id):
@@ -736,7 +709,7 @@ async def get_blacklist():
 
 
 # ============================================================
-# 📊 ФУНКЦИИ ДЛЯ АДМИНОВ
+# 📊 СТАТИСТИКА
 # ============================================================
 
 async def get_statistics():
@@ -821,7 +794,7 @@ async def get_all_applications():
 
 
 # ============================================================
-# 🔗 ФУНКЦИИ РАБОТЫ СО ССЫЛКАМИ
+# 🔗 ССЫЛКИ
 # ============================================================
 
 async def get_clan_link(clan_id):
@@ -903,7 +876,7 @@ async def clear_test_applications():
 
 
 # ============================================================
-# 🔔 НАПОМИНАНИЯ О НЕРАССМОТРЕННЫХ ЗАЯВКАХ
+# 🔔 НАПОМИНАНИЯ
 # ============================================================
 
 async def get_old_pending_applications():
@@ -939,19 +912,17 @@ async def get_old_pending_applications():
 
 
 # ============================================================
-# 🔌 SUPABASE КЛИЕНТ (ДЛЯ ПРЯМЫХ ЗАПРОСОВ)
+# 🔌 SUPABASE КЛИЕНТ
 # ============================================================
 
 import os
 from supabase import create_client
 
 def get_supabase_client():
-    """Получить клиент Supabase (если используется)"""
     url = os.getenv('SUPABASE_URL')
     key = os.getenv('SUPABASE_KEY')
     if url and key:
         return create_client(url, key)
     return None
 
-# Для обратной совместимости с admin.py
 supabase = get_supabase_client()
