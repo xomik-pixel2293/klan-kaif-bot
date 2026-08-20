@@ -12,13 +12,15 @@ def main_menu():
         [InlineKeyboardButton(text='📊 Мои заявки', callback_data='my_applications')],
         [InlineKeyboardButton(text='ℹ️ О кланах', callback_data='about_clans')],
         [InlineKeyboardButton(text='📞 Контакты', callback_data='contacts')],
-        [InlineKeyboardButton(text='🔙 Назад', callback_data='exit_test_mode')],
     ])
 
 
 def leader_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='📋 Заявки в мой клан', callback_data='my_clan_applications')],
+        [InlineKeyboardButton(text='📊 Мои заявки', callback_data='my_applications')],
+        [InlineKeyboardButton(text='ℹ️ О кланах', callback_data='about_clans')],
+        [InlineKeyboardButton(text='📞 Контакты', callback_data='contacts')],
     ])
 
 
@@ -94,7 +96,7 @@ def after_apply_buttons():
 
 def exit_test_button():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='🔙 Выйти из тестового режима', callback_data='exit_test_mode')],
+        [InlineKeyboardButton(text='🔙 Выйти из тестового режима', callback_data='back_to_admin')],
     ])
 
 
@@ -170,7 +172,7 @@ def select_clan_for_role_buttons(clans, role_type, user_id, username, name):
             text=f"{emoji} {clan_name}",
             callback_data=f"assign_to_clan_{role_type}_{clan_id}_{user_id}_{username}_{name}"
         )])
-    buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_assign_choice')])
+    buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='assign_choice_menu')])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -185,7 +187,7 @@ def select_clan_for_role_buttons_simple(clans, role_type, user_id, username):
             text=f"{emoji} {clan_name}",
             callback_data=f"assign_to_clan_{role_type}_{clan_id}_{user_id}"
         )])
-    buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='assign_from_new')])
+    buttons.append([InlineKeyboardButton(text='🔙 Назад', callback_data='assign_choice_menu')])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -291,6 +293,36 @@ def admin_clan_management_menu():
 
 
 # ============================================================
+# 💬 СВЯЗАТЬСЯ
+# ============================================================
+
+def contact_menu(app_id):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='📤 Отправить ссылку', callback_data=f'send_link_{app_id}')],
+        [InlineKeyboardButton(text='✏️ Написать сообщение', callback_data=f'send_message_{app_id}')],
+        [InlineKeyboardButton(text='🔗 Добавить ссылку', callback_data=f'add_link_{app_id}')],
+        [InlineKeyboardButton(text='✏️ Изменить ссылку', callback_data=f'edit_link_{app_id}')],
+        [InlineKeyboardButton(text='🔙 Отмена', callback_data='my_clan_applications')],
+    ])
+
+
+def contact_with_link(app_id, link):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='📤 Отправить ссылку', callback_data=f'send_link_{app_id}')],
+        [InlineKeyboardButton(text='✏️ Написать сообщение', callback_data=f'send_message_{app_id}')],
+        [InlineKeyboardButton(text='✏️ Изменить ссылку', callback_data=f'edit_link_{app_id}')],
+        [InlineKeyboardButton(text='🔙 Отмена', callback_data='my_clan_applications')],
+    ])
+
+
+def copy_template_button(template):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='📋 Скопировать шаблон', callback_data='copy_template')],
+        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_main')],
+    ])
+
+
+# ============================================================
 # 👑 УПРАВЛЕНИЕ АДМИНАМИ
 # ============================================================
 
@@ -307,34 +339,4 @@ def confirm_remove_admin_button(user_id):
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='✅ Да, удалить', callback_data=f'confirm_remove_admin_{user_id}')],
         [InlineKeyboardButton(text='❌ Отмена', callback_data='admin_remove_admin')],
-    ])
-
-
-# ============================================================
-# 💬 СВЯЗАТЬСЯ
-# ============================================================
-
-def contact_menu(app_id):
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='📤 Отправить ссылку', callback_data=f'send_link_{app_id}')],
-        [InlineKeyboardButton(text='✏️ Написать сообщение', callback_data=f'send_message_{app_id}')],
-        [InlineKeyboardButton(text='🔗 Добавить ссылку', callback_data=f'add_link_{app_id}')],
-        [InlineKeyboardButton(text='✏️ Изменить ссылку', callback_data=f'edit_link_{app_id}')],
-        [InlineKeyboardButton(text='🔙 Отмена', callback_data='back_to_main')],
-    ])
-
-
-def contact_with_link(app_id, link):
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='📤 Отправить ссылку', callback_data=f'send_link_{app_id}')],
-        [InlineKeyboardButton(text='✏️ Написать сообщение', callback_data=f'send_message_{app_id}')],
-        [InlineKeyboardButton(text='✏️ Изменить ссылку', callback_data=f'edit_link_{app_id}')],
-        [InlineKeyboardButton(text='🔙 Отмена', callback_data='back_to_main')],
-    ])
-
-
-def copy_template_button(template):
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='📋 Скопировать шаблон', callback_data='copy_template')],
-        [InlineKeyboardButton(text='🔙 Назад', callback_data='back_to_main')],
     ])
