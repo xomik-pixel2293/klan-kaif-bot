@@ -47,13 +47,15 @@ async def admin_become_candidate(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == 'exit_test_mode')
 async def exit_test_mode(callback: CallbackQuery, state: FSMContext):
+    """Выход из тестового режима — всегда в главное меню"""
     await callback.answer()
     await state.clear()
     
-    await callback.message.edit_text(
-        '⚙️ АДМИН-ПАНЕЛЬ KLAN KAIF\n\nВыберите действие:',
-        reply_markup=admin_menu()
-    )
+    clan = await get_clan_by_user(callback.from_user.id)
+    if clan:
+        await callback.message.edit_text('🏠 Главное меню:', reply_markup=leader_menu())
+    else:
+        await callback.message.edit_text('🏠 Главное меню:', reply_markup=main_menu())
 
 
 # ============================================================
