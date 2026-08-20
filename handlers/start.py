@@ -48,6 +48,12 @@ class ClanManagementForm(StatesGroup):
     waiting_edit_clan_field = State()
 
 
+class AdminForm(StatesGroup):
+    waiting_admin_id = State()
+    waiting_admin_username = State()
+    waiting_admin_name = State()
+
+
 # ============================================================
 # 🏠 СТАРТ
 # ============================================================
