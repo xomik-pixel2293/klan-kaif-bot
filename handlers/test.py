@@ -42,7 +42,7 @@ async def admin_test_application(callback: CallbackQuery):
     )
 
 
-@router.callback_query(F.data == 'write_test_application')
+@@router.callback_query(F.data == 'write_test_application')
 async def write_test_application(callback: CallbackQuery, state: FSMContext):
     """Начать написание тестовой анкеты"""
     if callback.from_user.id not in ADMIN_IDS:
