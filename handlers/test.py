@@ -6,13 +6,16 @@ from aiogram.fsm.context import FSMContext
 
 from config import ADMIN_IDS
 from database import (
-    get_clan, get_clan_active_status,
-    add_application  # ← УБИРАЕМ review_buttons
+    get_clan,
+    get_clan_active_status,
+    add_application
 )
 from keyboards import (
-    test_application_menu, back_button,
-    clan_choice_for_test, admin_menu,
-    review_buttons  # ← ДОБАВЛЯЕМ review_buttons ИЗ keyboards
+    test_application_menu,
+    back_button,
+    clan_choice_for_test,
+    admin_menu,
+    review_buttons
 )
 from .start import ApplicationForm
 
@@ -25,6 +28,7 @@ router = Router()
 
 @router.callback_query(F.data == 'admin_test_application')
 async def admin_test_application(callback: CallbackQuery):
+    """Показать меню тестовой анкеты"""
     if callback.from_user.id not in ADMIN_IDS:
         await callback.answer('⛔ Нет прав')
         return
@@ -40,6 +44,7 @@ async def admin_test_application(callback: CallbackQuery):
 
 @router.callback_query(F.data == 'write_test_application')
 async def write_test_application(callback: CallbackQuery, state: FSMContext):
+    """Начать написание тестовой анкеты"""
     if callback.from_user.id not in ADMIN_IDS:
         await callback.answer('⛔ Нет прав')
         return
@@ -64,12 +69,13 @@ async def write_test_application(callback: CallbackQuery, state: FSMContext):
         'ID: 123456789\n'
         'Часовой пояс (МСК): +0\n\n'
         '⚠️ После заполнения выберите клан для отправки.',
-        reply_markup=back_button('back_to_test')
+        reply_markup=back_button('back_to_admin')
     )
 
 
 @router.message(ApplicationForm.waiting_test_answers)
 async def receive_test_application(message: Message, state: FSMContext):
+    """Получить тестовую анкету"""
     if message.from_user.id not in ADMIN_IDS:
         await message.answer('⛔ У вас нет прав')
         await state.clear()
@@ -98,7 +104,7 @@ async def receive_test_application(message: Message, state: FSMContext):
             'Ник: Test_User\n'
             'ID: 123456789\n'
             'Часовой пояс (МСК): +0',
-            reply_markup=back_button('back_to_test')
+            reply_markup=back_button('back_to_admin')
         )
         return
 
@@ -118,7 +124,7 @@ async def receive_test_application(message: Message, state: FSMContext):
         await message.answer(
             '❌ Возраст должен быть числом от 10 до 99!\n'
             'Попробуйте снова:',
-            reply_markup=back_button('back_to_test')
+            reply_markup=back_button('back_to_admin')
         )
         return
 
@@ -130,7 +136,7 @@ async def receive_test_application(message: Message, state: FSMContext):
         await message.answer(
             '❌ Часовой пояс должен быть числом от -12 до +12!\n'
             'Попробуйте снова:',
-            reply_markup=back_button('back_to_test')
+            reply_markup=back_button('back_to_admin')
         )
         return
 
@@ -146,6 +152,7 @@ async def receive_test_application(message: Message, state: FSMContext):
 
 @router.callback_query(F.data.startswith('test_clan_'))
 async def test_select_clan(callback: CallbackQuery, state: FSMContext):
+    """Выбор клана для тестовой заявки"""
     if callback.from_user.id not in ADMIN_IDS:
         await callback.answer('⛔ Нет прав')
         return
@@ -171,18 +178,19 @@ async def test_select_clan(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer('❌ Клан не найден')
         return
 
+    # Правильный порядок полей:
+    # [0]=id, [1]=name, [2]=emoji, [3]=leader_id, [4]=leader_username,
+    # [5]=leader_name, [6]=deputy_id, [7]=deputy_username, [8]=deputy_name
     if len(clan) >= 9:
-        clan_id = clan[0]
-        name = clan[1]
-        leader_id = clan[3]
-        leader_username = clan[4]
-        leader_name = clan[5]
-        deputy_id = clan[6]
-        deputy_username = clan[7]
-        deputy_name = clan[8]
+        clan_name = clan[1]
+        leader_id = clan[3] if len(clan) > 3 else None
+        leader_username = clan[4] if len(clan) > 4 else None
+        leader_name = clan[5] if len(clan) > 5 else None
+        deputy_id = clan[6] if len(clan) > 6 else None
+        deputy_username = clan[7] if len(clan) > 7 else None
+        deputy_name = clan[8] if len(clan) > 8 else None
     else:
-        clan_id = clan[0]
-        name = clan[1]
+        clan_name = clan[1]
         leader_id = clan[2] if len(clan) > 2 else None
         leader_username = clan[3] if len(clan) > 3 else None
         leader_name = clan[4] if len(clan) > 4 else None
@@ -205,7 +213,7 @@ async def test_select_clan(callback: CallbackQuery, state: FSMContext):
     )
 
     text = (
-        f'🧪 ТЕСТОВАЯ ЗАЯВКА #{app_id} В КЛАН {name}\n\n'
+        f'🧪 ТЕСТОВАЯ ЗАЯВКА #{app_id} В КЛАН {clan_name}\n\n'
         f'От: @{callback.from_user.username or "test"} (ID: {callback.from_user.id})\n'
         f'Дата: {datetime.now().strftime("%d.%m.%Y, %H:%M")}\n\n'
         f'📝 АНКЕТА:\n'
@@ -241,7 +249,7 @@ async def test_select_clan(callback: CallbackQuery, state: FSMContext):
 
     await callback.message.edit_text(
         f'✅ Тестовая заявка #{app_id} создана!\n'
-        f'📨 Отправлена лидеру и заму клана {name}.\n\n'
+        f'📨 Отправлена лидеру и заму клана {clan_name}.\n\n'
         f'🧪 Это тестовая заявка — она помечена как "ТЕСТ" в базе данных.',
         reply_markup=admin_menu()
     )
