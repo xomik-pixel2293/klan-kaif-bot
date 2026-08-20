@@ -1,4 +1,6 @@
 import json
+import asyncpg
+import aiosqlite
 import os
 from datetime import datetime
 from aiogram import Router, F
@@ -1425,26 +1427,6 @@ async def back_to_assign_choice(callback: CallbackQuery, state: FSMContext):
         f'👥 Назначение {role_name}а\n\n'
         'Выберите действие:',
         reply_markup=assign_choice_menu()
-    )
-
-
-# ============================================================
-# 🔙 НАЗАД В ТЕСТОВУЮ АНКЕТУ
-# ============================================================
-
-@router.callback_query(F.data == 'admin_test_application')
-async def admin_test_application_back(callback: CallbackQuery):
-    """Назад в меню тестовой анкеты"""
-    if callback.from_user.id not in ADMIN_IDS:
-        await callback.answer('⛔ Нет прав')
-        return
-    await callback.answer()
-    
-    await callback.message.edit_text(
-        '🧪 ТЕСТОВАЯ АНКЕТА\n\n'
-        'Нажмите "Написать тестовую анкету", чтобы отправить заявку как кандидат.\n\n'
-        '📌 Анкета будет выглядеть как обычная заявка, но с пометкой "🧪 ТЕСТ"',
-        reply_markup=test_application_menu()
     )
 
 
